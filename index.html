@@ -221,6 +221,23 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .log-time{color:var(--tx3);white-space:nowrap;font-size:11px;padding-top:2px}
 .log-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;align-self:flex-start}
 
+
+/* COMPRAS / FACTURAS SII */
+.compra-card{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);padding:18px;margin-bottom:14px}
+.compra-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.compra-folio{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--am)}
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg-input)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--am);background:rgba(245,196,0,.05)}
+.upload-zone-icon{font-size:48px;margin-bottom:12px}
+.item-row-sii{display:grid;grid-template-columns:90px 1fr 80px 90px 90px 36px;gap:6px;align-items:center;margin-bottom:6px}
+.item-row-sii input,.item-row-sii select{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--tx);font-family:'Barlow',sans-serif;width:100%}
+.item-row-sii input:focus,.item-row-sii select:focus{outline:none;border-color:var(--am)}
+.tag-existe{background:var(--vdbg);color:var(--vdtx);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.tag-nuevo{background:var(--azbg);color:var(--aztx);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.ai-thinking{display:flex;align-items:center;gap:12px;padding:16px;background:var(--azbg);border-radius:10px;border:1px solid var(--az);margin:12px 0}
+.ai-spin{font-size:24px;animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
 /* PEDIDOS EN PREPARACIÓN */
 .pedido-card{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);padding:18px;margin-bottom:14px;transition:border-color .2s}
 .pedido-card:hover{border-color:var(--am)}
@@ -313,6 +330,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="nav-item" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
     <div class="nav-item" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
     <div class="nav-item" onclick="goTo('pedidos',this)"><span class="nav-icon">🔧</span><span>Pedidos en Prep.</span><span class="badge-nav" id="badge-pedidos">0</span></div>
+    <div class="nav-item" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
     <div class="nav-item" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
@@ -462,6 +480,23 @@ tr:hover td{background:rgba(245,196,0,.04)}
         </select>
       </div>
       <div id="pedidos-lista"></div>
+    </div>
+
+
+    <!-- COMPRAS / FACTURAS SII -->
+    <div class="page" id="page-compras">
+      <div class="section-header">
+        <h2>📥 Compras / Facturas SII</h2>
+        <button class="btn btn-primary btn-sm" onclick="showModal('modal-nueva-compra')">📄 Leer Factura PDF</button>
+        <button class="btn btn-secondary btn-sm" onclick="exportarCSV('compras')">📤 Exportar</button>
+      </div>
+      <div class="toolbar">
+        <input placeholder="Buscar por proveedor o N° factura..." oninput="filterTable('tbl-compras',this.value,[0,1,2])" style="width:260px">
+      </div>
+      <div class="card"><div class="tw"><table>
+        <thead><tr><th>N° Factura</th><th>Proveedor</th><th>Fecha</th><th>Ítems</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="tbl-compras"></tbody>
+      </table></div></div>
     </div>
 
     <!-- CAJA -->    <div class="page" id="page-caja">
@@ -789,6 +824,87 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
+<!-- NUEVA COMPRA / LECTOR FACTURA -->
+<div class="overlay" id="modal-nueva-compra"><div class="modal" style="width:780px;max-width:97vw">
+  <h3>📥 Leer Factura del SII</h3>
+
+  <!-- STEP 1: UPLOAD -->
+  <div id="compra-step1">
+    <div class="al al-info" style="margin-bottom:14px">
+      ⚡ Sube el PDF de la factura descargado desde el SII. La IA extraerá automáticamente proveedor, N° factura, fecha e ítems.
+    </div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('factura-pdf').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="event.preventDefault();this.classList.remove('drag');handlePDFDrop(event)">
+      <div class="upload-zone-icon">📄</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px">Arrastra el PDF aquí o haz clic para seleccionar</div>
+      <div style="font-size:12px;color:var(--tx3)">Facturas descargadas del SII en formato PDF</div>
+    </div>
+    <input type="file" id="factura-pdf" accept=".pdf" style="display:none" onchange="procesarFacturaPDF(event)">
+  </div>
+
+  <!-- STEP 2: AI PROCESSING -->
+  <div id="compra-step2" style="display:none">
+    <div class="ai-thinking" id="ai-thinking">
+      <div class="ai-spin">⚡</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--aztx)">Analizando factura con IA...</div>
+        <div style="font-size:12px;color:var(--aztx);margin-top:2px" id="ai-status">Extrayendo datos del PDF</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: REVIEW & CONFIRM -->
+  <div id="compra-step3" style="display:none">
+    <!-- Datos de la factura -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="fg"><label>N° Factura</label><input id="c-nfactura" placeholder="12345"></div>
+      <div class="fg"><label>Proveedor</label><input id="c-proveedor" placeholder="Nombre proveedor"></div>
+      <div class="fg"><label>RUT Proveedor</label><input id="c-rut" placeholder="76.543.210-K"></div>
+      <div class="fg"><label>Fecha</label><input id="c-fecha" type="date"></div>
+    </div>
+
+    <!-- Ítems extraídos -->
+    <div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">
+      Ítems extraídos
+    </div>
+    <div style="display:grid;grid-template-columns:90px 1fr 80px 90px 90px 36px;gap:6px;margin-bottom:6px;padding:0 4px">
+      <div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase">Código</div>
+      <div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase">Descripción</div>
+      <div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase">Cantidad</div>
+      <div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase">P. Unitario</div>
+      <div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase">Estado</div>
+      <div></div>
+    </div>
+    <div id="compra-items-lista" style="max-height:280px;overflow-y:auto"></div>
+    <button class="btn btn-secondary btn-xs" onclick="addCompraItem()" style="margin-top:8px">+ Agregar ítem manualmente</button>
+
+    <!-- Totales -->
+    <div class="tbox" style="margin-top:14px">
+      <div class="trow"><span style="color:var(--tx2)">Neto</span><span id="c-neto">$0</span></div>
+      <div class="trow"><span style="color:var(--tx2)">IVA (19%)</span><span id="c-iva">$0</span></div>
+      <div class="trow"><span>TOTAL FACTURA</span><span id="c-total">$0</span></div>
+    </div>
+
+    <div class="fg" style="margin-top:12px"><label>Observaciones</label><input id="c-obs" placeholder="Notas de la compra..."></div>
+  </div>
+
+  <div class="mfoot">
+    <button class="btn btn-secondary" onclick="resetCompraModal()">Cancelar</button>
+    <button class="btn btn-primary" id="btn-confirmar-compra" style="display:none" onclick="confirmarCompra()">✅ Confirmar e Ingresar al Inventario</button>
+  </div>
+</div></div>
+
+<!-- DETALLE COMPRA -->
+<div class="overlay" id="modal-ver-compra"><div class="modal wide">
+  <h3>📄 Detalle de Factura</h3>
+  <div id="ver-compra-body"></div>
+  <div class="mfoot">
+    <button class="btn btn-secondary" onclick="closeModal('modal-ver-compra')">Cerrar</button>
+  </div>
+</div></div>
+
 <!-- ACCESO CONFIGURACIÓN -->
 <div class="overlay" id="modal-acceso-config"><div class="modal" style="max-width:380px;text-align:center">
   <h3 style="justify-content:center">🔐 Acceso Restringido</h3>
@@ -840,8 +956,8 @@ tr:hover td{background:rgba(245,196,0,.04)}
 // ================================================================
 //  INDEXEDDB
 // ================================================================
-const DB_NAME='EletricidadPalavecino', DB_VER=3;
-const STORES=['clientes','proveedores','inventario','ventas','cotizaciones','caja_mov','config','historial','pedidos'];
+const DB_NAME='EletricidadPalavecino', DB_VER=4;
+const STORES=['clientes','proveedores','inventario','ventas','cotizaciones','caja_mov','config','historial','pedidos','compras'];
 let db=null;
 
 function initDB(){
@@ -946,7 +1062,7 @@ async function cargarDemoSiVacia(){
 // ================================================================
 //  MEMORIA CACHE
 // ================================================================
-let MEM={clientes:[],proveedores:[],inventario:[],ventas:[],cotizaciones:[],movimientos:[],historial:[],pedidos:[]};
+let MEM={clientes:[],proveedores:[],inventario:[],ventas:[],cotizaciones:[],movimientos:[],historial:[],pedidos:[],compras:[]};
 let CFG={apertura:50000,nombre:'Electricidad Palavecino',folio_next:5,cot_next:3,pin:'1120'};
 
 async function reloadAll(){
@@ -958,6 +1074,7 @@ async function reloadAll(){
   MEM.movimientos=(await dbGetAll('caja_mov')).sort((a,b)=>b.id-a.id);
   MEM.historial=(await dbGetAll('historial')).sort((a,b)=>b.ts-a.ts);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   CFG.apertura=await dbGetConfig('apertura_caja')||50000;
   CFG.folio_next=await dbGetConfig('folio_next')||5;
   CFG.cot_next=await dbGetConfig('cot_next')||3;
@@ -984,6 +1101,7 @@ function toast(msg,tipo='verde'){
 
 function showModal(id){
   if(id==='modal-nueva-venta'){ initVI(); populateCliSel('venta-cliente'); renderFavs(); }
+  if(id==='modal-nueva-compra'){ resetCompraModal(); document.getElementById('compra-step1').style.display='block'; document.getElementById('compra-step2').style.display='none'; document.getElementById('compra-step3').style.display='none'; document.getElementById('btn-confirmar-compra').style.display='none'; }
   if(id==='modal-cotizacion'){ initCI(); populateCliSel('cot-cliente'); }
   if(id==='modal-cierre-dia') generarCierreDia();
   if(id==='modal-orden-compra') generarOrdenCompra();
@@ -1010,11 +1128,11 @@ function goTo(page,el){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos en Preparación',caja:'Caja Diaria',historial:'Historial de Cambios',configuracion:'Configuración'};
+  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos en Preparación',compras:'Compras / Facturas SII',caja:'Caja Diaria',historial:'Historial de Cambios',configuracion:'Configuración'};
   document.getElementById('page-title').textContent=tits[page]||page;
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
-  const rend={clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig};
+  const rend={clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig};
   if(rend[page]) rend[page]();
 }
 function filterTable(id,val,cols){
@@ -1765,6 +1883,7 @@ function updateDash(){
   document.getElementById('kpi-ped-sub').textContent=pedList>0?`${pedList} listos para entrega`:'En preparación';
   updateStockBadge();
   updatePedidosBadge();
+  updateComprasBadge();
   document.getElementById('dash-ventas').innerHTML=MEM.ventas.slice(0,6).map(v=>{
     const ec=v.estado==='Pagada'?'bvd':v.estado==='Pendiente'?'bam':'brj';
     return`<tr><td>${v.cliente}</td><td style="font-weight:600">${fmt(v.total)}</td><td><span class="badge ${ec}">${v.estado}</span></td></tr>`;
@@ -1912,9 +2031,18 @@ async function limpiarDB(){
 // ================================================================
 //  IMPORTAR / EXPORTAR
 // ================================================================
-const importInfos={clientes:'Columnas: RUT · Nombre · Email · Teléfono · Categoría · Saldo · Dirección',inventario:'Columnas: SKU · Nombre · Categoría · Stock · Mínimo · P.Costo · P.Venta · Proveedor · Unidad',proveedores:'Columnas: RUT · Empresa · Contacto · Teléfono · Email · Condición Pago · Productos'};
+const importInfos={clientes:'Columnas: RUT · Nombre · Email · Teléfono · Categoría · Saldo · Dirección',inventario:'Columnas del Excel (en orden):\nSKU · Nombre · Categoría · Unidad · Stock · Mínimo · P.Costo · P.Venta · Proveedor · Descripción\n\nLa columna Margen (K) se ignora al importar.',proveedores:'Columnas: RUT · Empresa · Contacto · Teléfono · Email · Condición Pago · Productos'};
 let curImpMod='', impData=[];
-function importarExcel(mod){ curImpMod=mod; impData=[]; document.getElementById('import-info').textContent=importInfos[mod]||''; document.getElementById('import-preview').innerHTML=''; document.getElementById('btn-ci').style.display='none'; document.getElementById('file-input').value=''; document.getElementById('modal-import').classList.add('open'); }
+function importarExcel(mod){
+  curImpMod=mod; impData=[];
+  document.getElementById('import-info').textContent=importInfos[mod]||'';
+  document.getElementById('import-preview').innerHTML='';
+  document.getElementById('btn-ci').style.display='none';
+  document.getElementById('file-input').value='';
+  const hint=document.getElementById('import-excel-hint');
+  if(hint) hint.style.display = mod==='inventario' ? 'block' : 'none';
+  document.getElementById('modal-import').classList.add('open');
+}
 function procesarImport(ev){
   const file=ev.target.files[0]; if(!file) return;
   if(file.name.toLowerCase().endsWith('.csv')){
@@ -1931,7 +2059,21 @@ async function confirmarImport(){
   let count=0;
   for(const r of impData){
     if(curImpMod==='clientes'&&r[1]){ await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''}); count++; }
-    else if(curImpMod==='inventario'&&r[1]){ await dbAdd('inventario',{sku:r[0]||'EP-'+count,nombre:r[1],cat:r[2]||'Cables',stock:parseFloat(r[3])||0,min:parseFloat(r[4])||5,costo:parseFloat(r[5])||0,venta:parseFloat(r[6])||0,prov:r[7]||'',und:r[8]||'unidad',desc:'',ventas_count:0}); count++; }
+    else if(curImpMod==='inventario'&&r[1]){
+      // Columnas Excel: SKU(0) Nombre(1) Cat(2) Unidad(3) Stock(4) Min(5) Costo(6) Venta(7) Proveedor(8) Desc(9)
+      const sku   = String(r[0]||'').trim() || 'EP-'+String(count).padStart(3,'0');
+      const nombre= String(r[1]||'').trim();
+      const cat   = String(r[2]||'Cables').trim();
+      const und   = String(r[3]||'unidad').trim() || 'unidad';
+      const stock = parseFloat(String(r[4]||'0').replace(/[^0-9.-]/g,''))||0;
+      const min   = parseFloat(String(r[5]||'1').replace(/[^0-9.-]/g,''))||1;
+      const costo = parseFloat(String(r[6]||'0').replace(/[^0-9.-]/g,''))||0;
+      const venta = parseFloat(String(r[7]||'0').replace(/[^0-9.-]/g,''))||0;
+      const prov  = String(r[8]||'').trim();
+      const desc  = String(r[9]||'').trim();
+      await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+      count++;
+    }
     else if(curImpMod==='proveedores'&&r[1]){ await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',ultima:today(),prod:r[6]||'',dir:''}); count++; }
   }
   await reloadAll(); closeModal('modal-import');
@@ -1948,6 +2090,7 @@ function exportarCSV(mod){
   else if(mod==='ventas'){ h='Folio,Cliente,Fecha,Total,Estado,Tipo,Pago'; rows=MEM.ventas.map(v=>[v.folio,v.cliente,v.fecha,v.total,v.estado,v.tipo,v.pago]); }
   else if(mod==='cotizaciones'){ h='N°,Cliente,Fecha,Válida Hasta,Total,Estado'; rows=MEM.cotizaciones.map(c=>[c.num,c.cliente,c.fecha,c.validaHasta,c.total,c.estado]); }
   else if(mod==='proveedores'){ h='RUT,Empresa,Contacto,Teléfono,Email,Condición,Productos'; rows=MEM.proveedores.map(p=>[p.rut,p.empresa,p.contacto,p.tel,p.email,p.cond,p.prod]); }
+  else if(mod==='compras'){ h='N° Factura,Proveedor,RUT,Fecha,Total,Nuevos,Actualizados'; rows=MEM.compras.map(c=>[c.nfactura,c.proveedor,c.rut,c.fecha,c.total,c.nuevos,c.actualizados]); }
   const csv=[h,...rows.map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','))].join('\r\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
@@ -1970,7 +2113,9 @@ async function crearPedidoDesdeVenta(ventaId){
   const pedido={numPedido,ventaId,ventaFolio:v.folio,cliente:v.cliente,fechaCreacion:today(),fechaEntrega:'',estado:'Pendiente',items,notas:'',ts:Date.now()};
   await dbAdd('pedidos',pedido);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   updatePedidosBadge();
+  updateComprasBadge();
   await logAction('Pedidos','Nuevo',numPedido+' — '+v.cliente+' ('+v.folio+')');
   toast(`Pedido ${numPedido} creado ✅ — Ve a "Pedidos en Preparación"`,'naranja');
 }
@@ -2044,7 +2189,9 @@ async function cambiarEstadoRapido(id,estado){
   const p=MEM.pedidos.find(x=>x.id===id); if(!p) return;
   p.estado=estado; await dbPut('pedidos',p);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   updatePedidosBadge();
+  updateComprasBadge();
   await logAction('Pedidos','Estado',p.numPedido+' → '+estado);
   renderPedidos(); toast('Estado actualizado: '+estado+' ✅');
 }
@@ -2091,7 +2238,9 @@ async function toggleItemReunido(pedidoId,itemIdx,checked){
   else if(reunidos>0&&p.estado==='Pendiente') p.estado='En preparación';
   await dbPut('pedidos',p);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   updatePedidosBadge();
+  updateComprasBadge();
   // Actualizar UI del modal sin cerrarlo
   const pActual=MEM.pedidos.find(x=>x.id===pedidoId);
   if(pActual){ renderPedidoItems(pActual); document.getElementById('ped-estado').value=pActual.estado; }
@@ -2103,7 +2252,9 @@ async function actualizarEstadoPedido(){
   p.estado=document.getElementById('ped-estado').value;
   await dbPut('pedidos',p);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   updatePedidosBadge();
+  updateComprasBadge();
   await logAction('Pedidos','Estado',p.numPedido+' → '+p.estado);
   toast('Estado actualizado: '+p.estado+' ✅');
 }
@@ -2115,6 +2266,7 @@ async function guardarCamposPedido(){
   p.notas=document.getElementById('ped-notas').value;
   await dbPut('pedidos',p);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
 }
 
 function imprimirPedido(){
@@ -2154,7 +2306,9 @@ async function eliminarPedido(id){
   if(!p||!confirm(`¿Eliminar pedido ${p.numPedido}?`)) return;
   await dbDelete('pedidos',id);
   MEM.pedidos=(await dbGetAll('pedidos')).sort((a,b)=>b.id-a.id);
+  MEM.compras=(await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
   updatePedidosBadge();
+  updateComprasBadge();
   await logAction('Pedidos','Eliminar',p.numPedido);
   renderPedidos(); toast('Pedido eliminado','rojo');
 }
@@ -2163,6 +2317,314 @@ function updatePedidosBadge(){
   const activos=MEM.pedidos.filter(p=>p.estado!=='Entregado'&&p.estado!=='Cancelado').length;
   const b=document.getElementById('badge-pedidos');
   if(b){ b.textContent=activos; b.style.display=activos?'inline':'none'; }
+}
+
+
+// ================================================================
+//  COMPRAS / LECTOR FACTURAS SII
+// ================================================================
+let compraItems = [];
+let compraRawText = '';
+
+function resetCompraModal(){
+  compraItems = []; compraRawText = '';
+  document.getElementById('compra-step1').style.display = 'block';
+  document.getElementById('compra-step2').style.display = 'none';
+  document.getElementById('compra-step3').style.display = 'none';
+  document.getElementById('btn-confirmar-compra').style.display = 'none';
+  document.getElementById('factura-pdf').value = '';
+  document.getElementById('upload-zone').style.display = 'block';
+  closeModal('modal-nueva-compra');
+}
+
+function handlePDFDrop(e){
+  const file = e.dataTransfer.files[0];
+  if(file && file.type === 'application/pdf') procesarDesdeFile(file);
+  else toast('Solo se aceptan archivos PDF','rojo');
+}
+
+function procesarFacturaPDF(e){
+  const file = e.target.files[0];
+  if(file) procesarDesdeFile(file);
+}
+
+async function procesarDesdeFile(file){
+  document.getElementById('compra-step2').style.display = 'block';
+  document.getElementById('ai-status').textContent = 'Leyendo PDF...';
+
+  try {
+    // Convert PDF to base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = e => res(e.target.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('ai-status').textContent = 'Enviando a IA para análisis...';
+
+    const prompt = `Eres un asistente especializado en facturas chilenas del SII. Analiza este PDF de factura y extrae la información en formato JSON exacto.
+
+Extrae:
+1. numero_factura: número de la factura
+2. proveedor: nombre del emisor/proveedor
+3. rut_proveedor: RUT del emisor
+4. fecha: fecha de emisión (formato YYYY-MM-DD)
+5. items: array de ítems con:
+   - codigo: código o SKU del producto (si no tiene, genera uno corto)
+   - descripcion: descripción del producto
+   - cantidad: cantidad numérica
+   - precio_unitario: precio unitario sin IVA en pesos chilenos (número)
+   - precio_total: precio total del ítem sin IVA (número)
+6. neto: monto neto total (número)
+7. iva: monto IVA (número)
+8. total: total con IVA (número)
+
+Responde SOLO con el JSON, sin texto adicional ni backticks. Si no puedes leer algún campo, usa null.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    document.getElementById('ai-status').textContent = 'Procesando respuesta...';
+
+    if(!response.ok){
+      const err = await response.json();
+      throw new Error(err.error?.message || 'Error de API');
+    }
+
+    const data = await response.json();
+    const rawText = data.content[0]?.text || '';
+
+    // Parse JSON from response
+    let factura;
+    try {
+      const clean = rawText.replace(/```json|```/g,'').trim();
+      factura = JSON.parse(clean);
+    } catch(e) {
+      throw new Error('No se pudo interpretar la respuesta de la IA. Intenta con otro PDF.');
+    }
+
+    document.getElementById('ai-status').textContent = '¡Extracción completada!';
+
+    // Populate form
+    document.getElementById('c-nfactura').value = factura.numero_factura || '';
+    document.getElementById('c-proveedor').value = factura.proveedor || '';
+    document.getElementById('c-rut').value = factura.rut_proveedor || '';
+    document.getElementById('c-fecha').value = factura.fecha || today();
+
+    // Build items
+    compraItems = (factura.items || []).map(it => ({
+      codigo: it.codigo || '',
+      descripcion: it.descripcion || '',
+      cantidad: parseFloat(it.cantidad) || 1,
+      precio_unitario: parseFloat(it.precio_unitario) || 0,
+      precio_total: parseFloat(it.precio_total) || 0,
+      es_nuevo: true // will be checked against inventory
+    }));
+
+    // Check each item against inventory
+    compraItems.forEach(it => {
+      const enInv = MEM.inventario.find(p =>
+        p.sku?.toLowerCase() === it.codigo?.toLowerCase() ||
+        p.nombre?.toLowerCase().includes(it.descripcion?.toLowerCase().slice(0,15))
+      );
+      it.inv_match = enInv || null;
+      it.es_nuevo = !enInv;
+    });
+
+    renderCompraItems();
+    calcCompraTotales(factura.neto, factura.iva, factura.total);
+
+    setTimeout(()=>{
+      document.getElementById('compra-step2').style.display = 'none';
+      document.getElementById('compra-step3').style.display = 'block';
+      document.getElementById('btn-confirmar-compra').style.display = 'inline-block';
+    }, 600);
+
+  } catch(err) {
+    document.getElementById('ai-thinking').innerHTML = `
+      <div style="color:var(--rjtx)">❌ Error: ${err.message}</div>`;
+    toast('Error al procesar el PDF: ' + err.message, 'rojo');
+  }
+}
+
+function renderCompraItems(){
+  const cont = document.getElementById('compra-items-lista');
+  cont.innerHTML = compraItems.map((it, i) => {
+    const tag = it.es_nuevo
+      ? `<span class="tag-nuevo">➕ Nuevo</span>`
+      : `<span class="tag-existe">✅ Existe</span>`;
+    return `<div class="item-row-sii">
+      <input value="${it.codigo}" placeholder="Código" oninput="compraItems[${i}].codigo=this.value;checkItemExiste(${i})">
+      <input value="${it.descripcion}" placeholder="Descripción" oninput="compraItems[${i}].descripcion=this.value">
+      <input type="number" value="${it.cantidad}" min="0.01" step="0.01" oninput="compraItems[${i}].cantidad=+this.value;calcCompraTotales()">
+      <input type="number" value="${it.precio_unitario}" placeholder="P.Unit" oninput="compraItems[${i}].precio_unitario=+this.value;compraItems[${i}].precio_total=+this.value*compraItems[${i}].cantidad;calcCompraTotales()">
+      ${tag}
+      <button class="btn btn-danger btn-xs" onclick="compraItems.splice(${i},1);renderCompraItems();calcCompraTotales()" style="padding:4px 7px">×</button>
+    </div>`;
+  }).join('');
+}
+
+function checkItemExiste(i){
+  const it = compraItems[i];
+  const enInv = MEM.inventario.find(p => p.sku?.toLowerCase() === it.codigo?.toLowerCase());
+  it.inv_match = enInv || null;
+  it.es_nuevo = !enInv;
+  renderCompraItems();
+}
+
+function addCompraItem(){
+  compraItems.push({codigo:'',descripcion:'',cantidad:1,precio_unitario:0,precio_total:0,es_nuevo:true,inv_match:null});
+  renderCompraItems();
+}
+
+function calcCompraTotales(neto, iva, total){
+  // If called from item edits, recalculate
+  if(neto === undefined){
+    const subtotal = compraItems.reduce((s,it)=>s+(it.cantidad*it.precio_unitario),0);
+    neto = subtotal;
+    iva = Math.round(subtotal * 0.19);
+    total = subtotal + iva;
+  }
+  document.getElementById('c-neto').textContent = fmt(neto||0);
+  document.getElementById('c-iva').textContent = fmt(iva||0);
+  document.getElementById('c-total').textContent = fmt(total||0);
+}
+
+async function confirmarCompra(){
+  const nfactura = document.getElementById('c-nfactura').value.trim();
+  const proveedor = document.getElementById('c-proveedor').value.trim();
+  if(!proveedor){ toast('El proveedor es requerido','rojo'); return; }
+  if(!compraItems.length){ toast('No hay ítems para ingresar','rojo'); return; }
+
+  const neto = parseFloat(document.getElementById('c-neto').textContent.replace(/[$.]/g,'').replace(/\./g,'')) || 0;
+  const total = parseFloat(document.getElementById('c-total').textContent.replace(/[$.]/g,'').replace(/\./g,'')) || 0;
+
+  let nuevos = 0, actualizados = 0;
+
+  // Process each item
+  for(const it of compraItems){
+    if(!it.descripcion) continue;
+    const qty = parseFloat(it.cantidad) || 1;
+    const costo = parseFloat(it.precio_unitario) || 0;
+
+    if(it.inv_match){
+      // Update existing: add stock and update cost
+      const prod = MEM.inventario.find(p => p.id === it.inv_match.id);
+      if(prod){
+        prod.stock = (prod.stock || 0) + qty;
+        prod.costo = costo; // update cost price
+        await dbPut('inventario', prod);
+        actualizados++;
+      }
+    } else {
+      // Add new product
+      const sku = it.codigo || 'SII-' + String(MEM.inventario.length+1+nuevos).padStart(3,'0');
+      await dbAdd('inventario', {
+        sku, nombre: it.descripcion,
+        cat: 'Sin categoría', und: 'unidad',
+        stock: qty, min: 1,
+        costo, venta: 0, // price to be set later
+        prov: proveedor, desc: 'Ingresado desde factura '+nfactura,
+        ventas_count: 0
+      });
+      nuevos++;
+    }
+  }
+
+  // Save compra record
+  const compra = {
+    nfactura: nfactura || 'S/N',
+    proveedor,
+    rut: document.getElementById('c-rut').value.trim(),
+    fecha: document.getElementById('c-fecha').value || today(),
+    items: compraItems.map(it=>({...it, inv_match:null})),
+    neto, total,
+    obs: document.getElementById('c-obs').value.trim(),
+    nuevos, actualizados
+  };
+  await dbAdd('compras', compra);
+
+  // Reload inventory
+  MEM.inventario = await dbGetAll('inventario');
+  MEM.compras = (await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
+
+  await logAction('Compras','Nueva Factura', `${nfactura} — ${proveedor} — ${fmt(total)} (${nuevos} nuevos, ${actualizados} actualizados)`);
+
+  resetCompraModal();
+  updateDash();
+  toast(`Factura ingresada ✅ — ${nuevos} productos nuevos, ${actualizados} actualizados en inventario`);
+}
+
+function renderCompras(){
+  const tb = document.getElementById('tbl-compras');
+  if(!MEM.compras.length){
+    tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--tx3)">Sin facturas ingresadas aún. Usa "📄 Leer Factura PDF" para comenzar.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = MEM.compras.map(c => `<tr>
+    <td style="color:var(--am);font-weight:700">${c.nfactura}</td>
+    <td><strong>${c.proveedor}</strong><br><span style="font-size:11px;color:var(--tx3)">${c.rut||''}</span></td>
+    <td style="color:var(--tx2)">${c.fecha}</td>
+    <td><span class="badge bvd" style="margin-right:4px">${c.actualizados} actualizados</span><span class="badge baz">${c.nuevos} nuevos</span></td>
+    <td style="font-weight:700">${fmt(c.total)}</td>
+    <td><span class="badge bvd">Ingresada</span></td>
+    <td><button class="btn btn-secondary btn-xs" onclick="verCompra(${c.id})">👁 Ver</button>
+        <button class="btn btn-danger btn-xs" onclick="delCompra(${c.id})">🗑</button></td>
+  </tr>`).join('');
+  updateComprasBadge();
+}
+
+function verCompra(id){
+  const c = MEM.compras.find(x=>x.id===id); if(!c) return;
+  document.getElementById('ver-compra-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;font-size:13px">
+      <div style="background:var(--bg-input);padding:12px;border-radius:8px"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">N° FACTURA</div><div style="font-weight:700;color:var(--am)">${c.nfactura}</div></div>
+      <div style="background:var(--bg-input);padding:12px;border-radius:8px"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">PROVEEDOR</div><div style="font-weight:600">${c.proveedor}</div><div style="font-size:11px;color:var(--tx3)">${c.rut||''}</div></div>
+      <div style="background:var(--bg-input);padding:12px;border-radius:8px"><div style="font-size:11px;color:var(--tx2);margin-bottom:3px">FECHA</div><div style="font-weight:600">${c.fecha}</div></div>
+    </div>
+    <table style="width:100%;font-size:12.5px;border-collapse:collapse;margin-bottom:14px">
+      <thead><tr><th style="padding:8px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--tx3);text-transform:uppercase">Código</th><th style="padding:8px;text-align:left;border-bottom:1px solid var(--border);font-size:11px;color:var(--tx3);text-transform:uppercase">Descripción</th><th style="padding:8px;text-align:center;border-bottom:1px solid var(--border);font-size:11px;color:var(--tx3);text-transform:uppercase">Cant.</th><th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--tx3);text-transform:uppercase">P.Unit</th><th style="padding:8px;text-align:right;border-bottom:1px solid var(--border);font-size:11px;color:var(--tx3);text-transform:uppercase">Total</th></tr></thead>
+      <tbody>${(c.items||[]).map(it=>`<tr><td style="padding:7px 8px;border-bottom:1px solid var(--border);color:var(--tx3)">${it.codigo}</td><td style="padding:7px 8px;border-bottom:1px solid var(--border)">${it.descripcion}</td><td style="padding:7px 8px;border-bottom:1px solid var(--border);text-align:center">${it.cantidad}</td><td style="padding:7px 8px;border-bottom:1px solid var(--border);text-align:right">${fmt(it.precio_unitario)}</td><td style="padding:7px 8px;border-bottom:1px solid var(--border);text-align:right;font-weight:600">${fmt(it.cantidad*it.precio_unitario)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="tbox">
+      <div class="trow"><span style="color:var(--tx2)">Neto</span><span>${fmt(c.neto)}</span></div>
+      <div class="trow"><span style="color:var(--tx2)">IVA (19%)</span><span>${fmt(c.total-c.neto)}</span></div>
+      <div class="trow"><span>TOTAL</span><span>${fmt(c.total)}</span></div>
+    </div>
+    ${c.obs?`<div style="margin-top:12px;font-size:12px;color:var(--tx2)">📝 ${c.obs}</div>`:''}
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <span class="badge bvd">${c.actualizados} productos actualizados</span>
+      <span class="badge baz">${c.nuevos} productos nuevos</span>
+    </div>`;
+  document.getElementById('modal-ver-compra').classList.add('open');
+}
+
+async function delCompra(id){
+  const c = MEM.compras.find(x=>x.id===id);
+  if(!c||!confirm('¿Eliminar este registro de compra? El inventario NO se revertirá.')) return;
+  await dbDelete('compras', id);
+  MEM.compras = (await dbGetAll('compras')).sort((a,b)=>b.id-a.id);
+  await logAction('Compras','Eliminar','Factura '+c.nfactura+' — '+c.proveedor);
+  renderCompras(); toast('Registro eliminado','rojo');
+}
+
+function updateComprasBadge(){
+  const b = document.getElementById('badge-compras');
+  if(b){ b.textContent = MEM.compras.length; b.style.display = MEM.compras.length ? 'inline':'none'; }
 }
 
 // ================================================================
