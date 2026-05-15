@@ -2045,13 +2045,48 @@ function importarExcel(mod){
 }
 function procesarImport(ev){
   const file=ev.target.files[0]; if(!file) return;
+  const esInventario = curImpMod==='inventario';
   if(file.name.toLowerCase().endsWith('.csv')){
     const r=new FileReader();
-    r.onload=e=>{ const lines=e.target.result.split('\n').filter(l=>l.trim()); impData=lines.slice(1).map(l=>l.split(/[,;]/).map(c=>c.trim().replace(/^"|"$/g,''))); document.getElementById('import-preview').innerHTML=`<span style="color:var(--vdtx)">✅ ${impData.length} filas.</span>`; document.getElementById('btn-ci').style.display='inline-block'; };
+    r.onload=e=>{
+      const lines=e.target.result.split('\n').filter(l=>l.trim());
+      // Inventario Palavecino.xlsx exportado como CSV tiene 2 filas de encabezado (título + columnas)
+      const skip = esInventario ? 2 : 1;
+      const raw = lines.slice(skip).map(l=>l.split(/[,;]/).map(c=>c.trim().replace(/^"|"$/g,'')));
+      impData = raw.filter(r=>r[1]&&r[1].trim());
+      document.getElementById('import-preview').innerHTML=`<span style="color:var(--vdtx)">✅ ${impData.length} productos detectados.</span>`;
+      document.getElementById('btn-ci').style.display='inline-block';
+    };
     r.readAsText(file,'utf-8');
   } else if(typeof XLSX!=='undefined'){
     const r=new FileReader();
-    r.onload=e=>{ const wb=XLSX.read(e.target.result,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]]; const json=XLSX.utils.sheet_to_json(ws,{header:1}); impData=json.slice(1).filter(r=>r.length>0); document.getElementById('import-preview').innerHTML=`<span style="color:var(--vdtx)">✅ ${impData.length} filas.</span>`; document.getElementById('btn-ci').style.display='inline-block'; };
+    r.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const json=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+      // Detectar automáticamente dónde empiezan los datos reales:
+      // buscar la primera fila donde col B (index 1) tiene texto y no es encabezado conocido
+      const HEADERS = ['nombre','descripción','description','sku','código'];
+      let dataStart = 1;
+      for(let i=0;i<Math.min(json.length,6);i++){
+        const row = json[i];
+        const b = String(row[1]||'').trim().toLowerCase();
+        if(!b) continue;
+        const isHeader = HEADERS.some(h=>b.includes(h));
+        if(isHeader){ dataStart = i+1; continue; }
+        // Es dato real si col B tiene texto y no es encabezado
+        if(b.length > 3 && !isHeader){ dataStart = i; break; }
+      }
+      impData = json.slice(dataStart).filter(r=>{
+        const nombre = String(r[1]||'').trim();
+        return nombre.length > 2 &&
+               !nombre.toLowerCase().includes('total') &&
+               !nombre.toLowerCase().includes('nombre') &&
+               !nombre.toLowerCase().includes('descripción');
+      });
+      document.getElementById('import-preview').innerHTML=`<span style="color:var(--vdtx)">✅ ${impData.length} productos detectados desde Excel.</span>`;
+      document.getElementById('btn-ci').style.display='inline-block';
+    };
     r.readAsArrayBuffer(file);
   }
 }
@@ -2060,10 +2095,13 @@ async function confirmarImport(){
   for(const r of impData){
     if(curImpMod==='clientes'&&r[1]){ await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''}); count++; }
     else if(curImpMod==='inventario'&&r[1]){
-      // Columnas Excel: SKU(0) Nombre(1) Cat(2) Unidad(3) Stock(4) Min(5) Costo(6) Venta(7) Proveedor(8) Desc(9)
-      const sku   = String(r[0]||'').trim() || 'EP-'+String(count).padStart(3,'0');
+      // Columnas: SKU(0) Nombre(1) Cat(2) Unidad(3) Stock(4) Min(5) Costo(6) Venta(7) Proveedor(8) Desc(9)
+      const CATS_OK = ['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
+      const sku   = String(r[0]||'').trim() || 'EP-'+String(count+1).padStart(4,'0');
       const nombre= String(r[1]||'').trim();
-      const cat   = String(r[2]||'Cables').trim();
+      const catRaw= String(r[2]||'').trim();
+      // Validar categoría — si no es válida usar Sin categoría
+      const cat   = CATS_OK.includes(catRaw) ? catRaw : 'Sin categoría';
       const und   = String(r[3]||'unidad').trim() || 'unidad';
       const stock = parseFloat(String(r[4]||'0').replace(/[^0-9.-]/g,''))||0;
       const min   = parseFloat(String(r[5]||'1').replace(/[^0-9.-]/g,''))||1;
@@ -2071,7 +2109,17 @@ async function confirmarImport(){
       const venta = parseFloat(String(r[7]||'0').replace(/[^0-9.-]/g,''))||0;
       const prov  = String(r[8]||'').trim();
       const desc  = String(r[9]||'').trim();
-      await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+      if(!nombre) continue;
+      // Verificar si el SKU ya existe → actualizar, si no → crear
+      const existente = MEM.inventario.find(p=>p.sku===sku);
+      if(existente){
+        existente.nombre=nombre; existente.cat=cat; existente.und=und;
+        existente.stock=stock; existente.min=min; existente.costo=costo;
+        existente.venta=venta; existente.prov=prov; existente.desc=desc;
+        await dbPut('inventario',existente);
+      } else {
+        await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+      }
       count++;
     }
     else if(curImpMod==='proveedores'&&r[1]){ await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',ultima:today(),prod:r[6]||'',dir:''}); count++; }
