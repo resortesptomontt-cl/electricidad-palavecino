@@ -21963,6 +21963,36 @@ tr:hover td{background:rgba(245,196,0,.04)}
 })();
 
 </script>
+<script type="importmap">
+{
+  "imports": {
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+  }
+}
+</script>
+<script type="module">
+import { initializeApp, getApps } from "firebase/app";
+import {
+  getFirestore, collection, doc,
+  addDoc, setDoc, getDoc, getDocs, deleteDoc
+} from "firebase/firestore";
+
+window._fbInitializeApp     = initializeApp;
+window._fbGetApps           = getApps;
+window._fbGetFirestore      = getFirestore;
+window._fbApp               = initializeApp;
+window._fbFirestore         = getFirestore;
+window._fbCollection        = collection;
+window._fbDoc               = doc;
+window._fbAddDoc            = addDoc;
+window._fbSetDoc            = setDoc;
+window._fbGetDoc            = getDoc;
+window._fbGetDocs           = getDocs;
+window._fbDeleteDoc         = deleteDoc;
+window.__FIREBASE_READY__   = true;
+console.log("✅ Firebase module loaded");
+</script>
 <script>
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {s1:'Sucursal 1', s2:'Sucursal 2', admin:'Administrador'};
@@ -21989,7 +22019,7 @@ async function initDB(){
     attempts++;
   }
   if(!window.__FIREBASE_READY__){
-    throw new Error('Firebase bundle no cargó. Verifica que firebase-bundle.js esté en el mismo directorio.');
+    throw new Error('Firebase no pudo inicializar. Intenta recargar la página.');
   }
   // Initialize app (avoid duplicate initialization)
   const existingApps = _fbGetApps();
@@ -21999,12 +22029,8 @@ async function initDB(){
     fbApp = _fbInitializeApp(FIREBASE_CONFIG);
   }
   fsDB = _fbGetFirestore(fbApp);
-  // Enable offline persistence
-  try {
-    await _fbEnablePersistence(fsDB);
-  } catch(e) {
-    // ok - multiple tabs or unimplemented
-  }
+  // Skip persistence to avoid connection issues
+  // await _fbEnablePersistence(fsDB);
 }
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
