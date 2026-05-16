@@ -304,13 +304,16 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:1px;color:var(--tx)">ELECTRICIDAD PALAVECINO</div>
   <div style="font-size:14px;color:var(--tx2);margin-bottom:8px">Selecciona tu sucursal para continuar</div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
-    <button onclick="seleccionarSucursal('s1')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--am);color:var(--neg);border:none;border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:180px">
-      🏪 Sucursal 1
+    <button onclick="pedirPinSucursal('s1')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--am);color:var(--neg);border:none;border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+      🏪 Casa Matriz<br><small style="font-size:12px;font-weight:400">Antonio Varas 1117</small>
     </button>
-    <button onclick="seleccionarSucursal('s2')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:180px">
-      🏪 Sucursal 2
+    <button onclick="pedirPinSucursal('s2')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+      🏪 Sucursal<br><small style="font-size:12px;font-weight:400">Los Muermos</small>
     </button>
-    <button onclick="pedirAccesoAdmin()" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--am);border:2px solid var(--am);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:180px">
+    <button onclick="pedirPinSucursal('bodega')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+      🏭 Bodega General
+    </button>
+    <button onclick="pedirPinSucursal('admin')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--am);border:2px solid var(--am);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
       🔑 Administrador
     </button>
   </div>
@@ -363,11 +366,11 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="nav-item" onclick="goTo('clientes',this)"><span class="nav-icon">👥</span><span>Clientes</span></div>
     <div class="nav-item" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
     <div class="nav-item" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span>Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
-    <div class="nav-item" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
-    <div class="nav-item" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
+    <div class="nav-item" id="nav-ventas" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
+    <div class="nav-item" id="nav-cotizaciones" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
     <div class="nav-item" onclick="goTo('pedidos',this)"><span class="nav-icon">🔧</span><span>Pedidos en Prep.</span><span class="badge-nav" id="badge-pedidos">0</span></div>
     <div class="nav-item" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
-    <div class="nav-item" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
+    <div class="nav-item" id="nav-caja" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
@@ -21995,7 +21998,19 @@ console.log("✅ Firebase module loaded");
 </script>
 <script>
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
-const SUC_NOMBRES = {s1:'Sucursal 1', s2:'Sucursal 2', admin:'Administrador'};
+const SUC_NOMBRES = {
+  s1:     'Casa Matriz — Antonio Varas 1117',
+  s2:     'Sucursal Los Muermos',
+  bodega: 'Bodega General',
+  admin:  'Administrador'
+};
+// PINs por sucursal — visibles desde panel admin
+const SUC_PINS = {
+  s1:     '1117',
+  s2:     '1234',
+  bodega: '5678',
+  admin:  '1120'
+};
 
 // =============================================================// ================================================================
 //  FIREBASE / FIRESTORE
@@ -22034,11 +22049,8 @@ async function initDB(){
 }
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
-// Shared: inventario_cat (catálogo), proveedores, config
-// Per-branch: inventario_stock/{sucursal}, clientes/{sucursal},
-//             ventas/{sucursal}, cotizaciones/{sucursal},
-//             pedidos/{sucursal}, caja_mov/{sucursal},
-//             historial/{sucursal}, compras/{sucursal}
+// Compartidas: inventario_cat, proveedores, config
+// Por sucursal: clientes_s1/s2/bodega, ventas_s1/s2, stock_s1/s2/bodega, etc.
 
 function colName(store){
   const SHARED = ['proveedores','config'];
@@ -22094,9 +22106,7 @@ async function dbSetConfig(k,v){
   await _fbSetDoc(_fbDoc(fsDB, 'config', k), {value:v});
 }
 
-// ── STOCK PER BRANCH ──────────────────────────────────────
-// inventario_cat = shared catalog (nombre, sku, cat, costo, venta, etc.)
-// stock_{sucursal} = {sku, stock, min} per branch
+// ── STOCK POR SUCURSAL ──────────────────────────────────────
 async function getStockSucursal(sku){
   const snap = await _fbGetDoc(_fbDoc(fsDB, 'stock_'+SUC, sku));
   return snap.exists() ? snap.data() : {stock:0, min:1};
@@ -22302,6 +22312,21 @@ function toggleTheme(){
 // ================================================================
 //  SELECTOR DE SUCURSAL
 // ================================================================
+let selPinTarget = '';
+let selPinBuffer = '';
+
+function pedirPinSucursal(suc){
+  selPinTarget = suc;
+  selPinBuffer = '';
+  updateSelPinDots();
+  document.getElementById('sel-pin-error').textContent = '';
+  // Update title
+  const wrap = document.getElementById('sel-pin-wrap');
+  const titulo = wrap.querySelector('div');
+  if(titulo) titulo.textContent = 'PIN para ' + (SUC_NOMBRES[suc] || suc);
+  wrap.style.display = 'flex';
+}
+
 function seleccionarSucursal(suc){
   SUC = suc;
   sessionStorage.setItem('ep_sucursal', suc);
@@ -22309,26 +22334,27 @@ function seleccionarSucursal(suc){
   // Update sucursal badge
   const sb = document.getElementById('suc-badge');
   if(sb){
-    sb.textContent = '🏪 ' + (SUC_NOMBRES[suc] || suc);
-    if(suc === 'admin'){
-      sb.style.background = 'var(--nrbg)'; sb.style.color = 'var(--nrtx)'; sb.style.borderColor = 'var(--nr)';
-    }
+    const icons = {s1:'🏪', s2:'🏪', bodega:'🏭', admin:'🔑'};
+    sb.textContent = (icons[suc]||'🏪') + ' ' + (SUC_NOMBRES[suc]||suc);
+    if(suc==='admin'){ sb.style.background='var(--nrbg)'; sb.style.color='var(--nrtx)'; sb.style.borderColor='var(--nr)'; }
+    else if(suc==='bodega'){ sb.style.background='var(--azbg)'; sb.style.color='var(--aztx)'; sb.style.borderColor='var(--az)'; }
   }
-  // Show consolidado nav only for admin
-  const navCons = document.getElementById('nav-consolidado');
-  if(navCons) navCons.style.display = suc === 'admin' ? 'flex' : 'none';
-  // Continue init
+  // Show/hide nav items based on sucursal
+  const navCons    = document.getElementById('nav-consolidado');
+  const navVentas  = document.getElementById('nav-ventas');
+  const navCompras = document.getElementById('nav-compras');
+  const navCaja    = document.getElementById('nav-caja');
+  const navCots    = document.getElementById('nav-cotizaciones');
+  const navPedidos = document.getElementById('nav-pedidos');
+  if(navCons)    navCons.style.display    = suc==='admin'  ? 'flex' : 'none';
+  if(navVentas)  navVentas.style.display  = suc==='bodega' ? 'none' : 'flex';
+  if(navCompras) navCompras.style.display = suc==='bodega' ? 'none' : 'flex';
+  if(navCaja)    navCaja.style.display    = suc==='bodega' ? 'none' : 'flex';
+  if(navCots)    navCots.style.display    = suc==='bodega' ? 'none' : 'flex';
+  if(navPedidos) navPedidos.style.display = suc==='bodega' ? 'none' : 'flex';
   continuarInit();
 }
 
-function pedirAccesoAdmin(){
-  selPinBuffer = '';
-  updateSelPinDots();
-  document.getElementById('sel-pin-error').textContent = '';
-  document.getElementById('sel-pin-wrap').style.display = 'flex';
-}
-
-let selPinBuffer = '';
 function selPinKey(k){
   const err = document.getElementById('sel-pin-error');
   err.textContent = '';
@@ -22338,9 +22364,11 @@ function selPinKey(k){
   selPinBuffer+=k; updateSelPinDots();
   if(selPinBuffer.length===4){
     setTimeout(()=>{
-      if(selPinBuffer===PIN_ADMIN){
-        rolActual='admin'; actualizarRolBadge();
-        seleccionarSucursal('admin');
+      // Get correct PIN for target sucursal
+      const pinCorrecto = SUC_PINS[selPinTarget] || '1120';
+      if(selPinBuffer===pinCorrecto){
+        if(selPinTarget==='admin') rolActual='admin';
+        seleccionarSucursal(selPinTarget);
       } else {
         err.textContent='PIN incorrecto';
         selPinBuffer=''; updateSelPinDots();
@@ -22358,8 +22386,7 @@ function updateSelPinDots(){
 // ================================================================
 //  SISTEMA DE ROLES — Vendedor / Administrador
 // ================================================================
-const PIN_VENDEDOR   = '1117';
-const PIN_ADMIN      = '1120';
+// PINs ahora en SUC_PINS (definido al inicio)
 let   rolActual      = 'vendedor'; // rol por defecto al abrir
 let   cfgPinBuffer   = '';
 let   cfgNavEl       = null; // nav element que disparó el acceso
@@ -22390,7 +22417,7 @@ function cfgPinKey(k){
   cfgPinBuffer += k; updateCfgDots();
   if(cfgPinBuffer.length === 4){
     setTimeout(()=>{
-      if(cfgPinBuffer === PIN_ADMIN){
+      if(cfgPinBuffer === (SUC_PINS.admin||'1120')){
         rolActual = 'admin';
         actualizarRolBadge();
         closeModal('modal-acceso-config');
@@ -23129,7 +23156,8 @@ function renderHistorial(){
 }
 async function limpiarHistorial(){
   if(!confirm('¿Limpiar todo el historial de cambios?')) return;
-  await dbClear('historial');
+  const snap = await _fbGetDocs(_fbCollection(fsDB, colName('historial')));
+  for(const d of snap.docs) await _fbDeleteDoc(d.ref);
   MEM.historial=[];
   renderHistorial(); toast('Historial limpiado','rojo');
 }
@@ -23197,25 +23225,26 @@ async function restaurarBackup(ev){
   const txt=await file.text();
   try{
     const data=JSON.parse(txt);
-    for(const s of ['clientes','proveedores','inventario','ventas','cotizaciones','caja_mov']) await dbClear(s);
-    for(const x of (data.clientes||[])) await dbAdd('clientes',x);
-    for(const x of (data.proveedores||[])) await dbAdd('proveedores',x);
-    for(const x of (data.inventario||[])) await dbAdd('inventario',x);
-    for(const x of (data.ventas||[])) await dbAdd('ventas',x);
+    // Limpiar colecciones antes de restaurar
+    for(const store of ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras']){
+      const snap = await _fbGetDocs(_fbCollection(fsDB, colName(store)));
+      for(const d of snap.docs) await _fbDeleteDoc(d.ref);
+    }
+    // Restaurar datos
+    for(const x of (data.clientes||[]))     await dbAdd('clientes',x);
+    for(const x of (data.proveedores||[]))  await dbAdd('proveedores',x);
+    for(const x of (data.inventario||[]))   await dbAdd('inventario',x);
+    for(const x of (data.ventas||[]))       await dbAdd('ventas',x);
     for(const x of (data.cotizaciones||[])) await dbAdd('cotizaciones',x);
-    for(const x of (data.movimientos||[])) await dbAdd('caja_mov',x);
+    for(const x of (data.movimientos||[]))  await dbAdd('caja_mov',x);
     if(data.config){ await dbSetConfig('apertura_caja',data.config.apertura||50000); await dbSetConfig('folio_next',data.config.folio_next||1); await dbSetConfig('cot_next',data.config.cot_next||1); }
-    await reloadAll(); updateDash();
+    await cargarPins();
+  await reloadAll(); updateDash();
     await logAction('Sistema','Restaurar','Respaldo restaurado desde archivo');
     toast('Respaldo restaurado ✅');
   } catch(e){ toast('Error al leer el archivo','rojo'); }
 }
-async function limpiarDB(){
-  if(!confirm('⛔ ¿Borrar TODOS los datos?')) return;
-  if(!confirm('¿Estás completamente seguro?')) return;
-  for(const s of STORES) await dbClear(s);
-  await reloadAll(); updateDash(); toast('Base de datos limpiada','rojo');
-}
+// limpiarDB — ver versión Firebase más arriba
 
 // ================================================================
 //  IMPORTAR / EXPORTAR
@@ -23956,6 +23985,40 @@ function filterConsolidado(q){
     (p.cat||'').toLowerCase().includes(f)
   );
   renderConsolidadoTable(filtered);
+}
+
+
+// ================================================================
+//  GESTIÓN DE PINs
+// ================================================================
+const pinVisible = {s1:false, s2:false, bodega:false, admin:false};
+
+function togglePin(suc){
+  pinVisible[suc] = !pinVisible[suc];
+  const el = document.getElementById('pin-display-'+suc);
+  if(el) el.textContent = pinVisible[suc] ? (SUC_PINS[suc]||'----') : '••••';
+}
+
+function cambiarPin(suc){
+  const nuevo = prompt(`Nuevo PIN para ${SUC_NOMBRES[suc]||suc} (4 dígitos):`);
+  if(!nuevo) return;
+  if(!/^\d{4}$/.test(nuevo)){ toast('El PIN debe ser exactamente 4 dígitos','rojo'); return; }
+  SUC_PINS[suc] = nuevo;
+  // Save to Firebase config
+  dbSetConfig('pin_'+suc, nuevo).then(()=>{
+    toast('PIN actualizado','verde');
+    // Update display if visible
+    const el = document.getElementById('pin-display-'+suc);
+    if(el) el.textContent = pinVisible[suc] ? nuevo : '••••';
+  });
+}
+
+async function cargarPins(){
+  // Load saved PINs from Firebase
+  for(const suc of ['s1','s2','bodega','admin']){
+    const saved = await dbGetConfig('pin_'+suc);
+    if(saved) SUC_PINS[suc] = saved;
+  }
 }
 
 // ================================================================
