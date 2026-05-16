@@ -293,6 +293,10 @@ tr:hover td{background:rgba(245,196,0,.04)}
   .nav-item span:not(.nav-icon),.logo-text,.logo-sub,.nav-section,.sidebar-footer,.badge-nav,.db-status{display:none}
   .kpi-grid{grid-template-columns:repeat(2,1fr)}  .grid2{grid-template-columns:1fr}
 }
+
+/* Force selector visible on load — JS will hide it after sucursal chosen */
+#sel-screen { display: flex !important; }
+#sel-screen.hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -1151,6 +1155,7 @@ async function setStockSucursal(sku,stock,min){
 </script>
 <script>
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1176,63 +1181,14 @@ let fbApp;
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
 // Compartidas: inventario_cat, proveedores, config
-// Por sucursal: clientes_s1/s2/bodega, ventas_s1/s2, stock_s1/s2/bodega, etc.
 
-function col(store){
-  return _fbCollection(fsDB, colName(store));
-}
 
-// ── DB FUNCTIONS (same API as IndexedDB) ─────────────────
-async function dbGetAll(store){
-  const snap = await _fbGetDocs(col(store));
-  return snap.docs.map(d=>({...d.data(), id:d.id}));
-}
 
-async function dbAdd(store, data){
-  const d = {...data};
-  delete d.id;
-  const SHARED = ['proveedores','config','inventario'];
-  if(!SHARED.includes(store)){
-    d.sucursal = SUC;
-    d.ts = Date.now();
-  }
-  const ref = await _fbAddDoc(col(store), d);
-  return ref.id;
-}
 
-async function dbPut(store, data){
-  const d = {...data};
-  const id = d.id;
-  delete d.id;
-  if(!id){ return dbAdd(store, data); }
-  const docRef = _fbDoc(fsDB, colName(store), String(id));
-  await _fbSetDoc(docRef, d, {merge:true});
-  return id;
-}
 
-async function dbDelete(store, id){
-  const docRef = _fbDoc(fsDB, colName(store), String(id));
-  await _fbDeleteDoc(docRef);
-}
 
-async function dbGetConfig(k){
-  const docRef = _fbDoc(fsDB, 'config', k);
-  const snap = await _fbGetDoc(docRef);
-  return snap.exists() ? snap.data().value : null;
-}
 
-async function dbSetConfig(k,v){
-  await _fbSetDoc(_fbDoc(fsDB, 'config', k), {value:v});
-}
 
-// ── STOCK POR SUCURSAL ──────────────────────────────────────
-async function getStockSucursal(sku){
-  const snap = await _fbGetDoc(_fbDoc(fsDB, 'stock_'+SUC, sku));
-  return snap.exists() ? snap.data() : {stock:0, min:1};
-}
-async function setStockSucursal(sku, stock, min){
-  await _fbSetDoc(_fbDoc(fsDB, 'stock_'+SUC, sku), {stock, min}, {merge:true});
-}
 //  HISTORIAL DE CAMBIOS
 // ================================================================
 async function logAction(modulo, accion, detalle){
@@ -1319,9 +1275,9 @@ async function reloadAll(){
   // Load catalog (shared inventory)
   const cat = await dbGetAll('inventario');
   // Merge with branch stock
-  const stockSnap = await _fbGetDocs(_fbCollection(fsDB, 'stock_'+SUC));
+  const stockSnap = await fbGetCollection('stock_'+SUC);
   const stockMap = {};
-  stockSnap.docs.forEach(d=>{ stockMap[d.id]=d.data(); });
+  stockSnap.forEach(d=>{ stockMap[d.sku||d.id]=d; });
   MEM.inventario = cat.map(p=>({
     ...p,
     stock: stockMap[p.sku]?.stock ?? p.stock ?? 0,
@@ -1449,7 +1405,7 @@ function pedirPinSucursal(suc){
 function seleccionarSucursal(suc){
   SUC = suc;
   sessionStorage.setItem('ep_sucursal', suc);
-  document.getElementById('sel-screen').style.display = 'none';
+  document.getElementById('sel-screen').classList.add('hidden');
   // Update sucursal badge
   const sb = document.getElementById('suc-badge');
   if(sb){
@@ -1471,7 +1427,7 @@ function seleccionarSucursal(suc){
   if(navCaja)    navCaja.style.display    = suc==='bodega' ? 'none' : 'flex';
   if(navCots)    navCots.style.display    = suc==='bodega' ? 'none' : 'flex';
   if(navPedidos) navPedidos.style.display = suc==='bodega' ? 'none' : 'flex';
-  document.getElementById('sel-screen').style.display='none';
+  document.getElementById('sel-screen').classList.add('hidden');
   document.getElementById('loading-screen').style.display='flex';
   continuarInit();
 }
@@ -2277,8 +2233,8 @@ function renderHistorial(){
 }
 async function limpiarHistorial(){
   if(!confirm('¿Limpiar todo el historial de cambios?')) return;
-  const snap = await _fbGetDocs(_fbCollection(fsDB, colName('historial')));
-  for(const d of snap.docs) await _fbDeleteDoc(d.ref);
+  const docs = await dbGetAll('historial');
+  for(const d of docs) await dbDelete('historial', d.id);
   MEM.historial=[];
   renderHistorial(); toast('Historial limpiado','rojo');
 }
@@ -2348,8 +2304,8 @@ async function restaurarBackup(ev){
     const data=JSON.parse(txt);
     // Limpiar colecciones antes de restaurar
     for(const store of ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras']){
-      const snap = await _fbGetDocs(_fbCollection(fsDB, colName(store)));
-      for(const d of snap.docs) await _fbDeleteDoc(d.ref);
+      const docs = await dbGetAll(store);
+      for(const d of docs) await dbDelete(store, d.id);
     }
     // Restaurar datos
     for(const x of (data.clientes||[]))     await dbAdd('clientes',x);
@@ -3024,18 +2980,18 @@ async function renderConsolidado(){
   try {
     // Load ventas from both branches
     const [v1snap, v2snap, inv_snap, stock1snap, stock2snap] = await Promise.all([
-      _fbGetDocs(_fbCollection(fsDB, 'ventas_s1')),
-      _fbGetDocs(_fbCollection(fsDB, 'ventas_s2')),
-      _fbGetDocs(_fbCollection(fsDB, 'inventario_cat')),
-      _fbGetDocs(_fbCollection(fsDB, 'stock_s1')),
-      _fbGetDocs(_fbCollection(fsDB, 'stock_s2')),
+      fbGetCollection('ventas_s1'),
+      fbGetCollection('ventas_s2'),
+      fbGetCollection('inventario_cat'),
+      fbGetCollection('stock_s1'),
+      fbGetCollection('stock_s2'),
     ]);
 
-    const ventas1 = v1snap.docs.map(d=>d.data());
-    const ventas2 = v2snap.docs.map(d=>d.data());
-    const catalogo = inv_snap.docs.map(d=>({...d.data(), id:d.id}));
-    const stock1map = {}; stock1snap.docs.forEach(d=>{ stock1map[d.id]=d.data(); });
-    const stock2map = {}; stock2snap.docs.forEach(d=>{ stock2map[d.id]=d.data(); });
+    const ventas1 = v1snap;
+    const ventas2 = v2snap;
+    const catalogo = inv_snap;
+    const stock1map = {}; stock1snap.forEach(d=>{ stock1map[d.sku||d.id]=d; });
+    const stock2map = {}; stock2snap.forEach(d=>{ stock2map[d.sku||d.id]=d; });
 
     const hoy = today();
 
@@ -3194,7 +3150,7 @@ async function continuarInit(){
     // Show selector again so user can retry
     sessionStorage.removeItem('ep_sucursal');
     document.getElementById('loading-screen').style.display='none';
-    document.getElementById('sel-screen').style.display='flex';
+    document.getElementById('sel-screen').classList.remove('hidden');
     toast('Error al conectar: '+err.message+' — intenta de nuevo','rojo');
   }
 }
@@ -3227,8 +3183,9 @@ async function dbGetAllRaw(colPath){
 window.addEventListener('DOMContentLoaded', ()=>{
   // Always show selector on load — clear any stale session
   sessionStorage.removeItem('ep_sucursal');
-  document.getElementById('sel-screen').style.display='flex';
+  document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 </script>
 </body>
