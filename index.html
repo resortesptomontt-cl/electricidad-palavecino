@@ -10665,10 +10665,10 @@
             return CompositeFilter.create([ e, t ], "and" /* CompositeOperator.AND */);
         }(e, t) : __PRIVATE_applyDistributionFieldAndCompositeFilters(e, t) : t instanceof FieldFilter ? __PRIVATE_applyDistributionFieldAndCompositeFilters(t, e) : function __PRIVATE_applyDistributionCompositeFilters(e, t) {
             // There are four cases:
-            // (A & B) & (C & D) --> (A & B & C & D)
-            // (A & B) & (C | D) --> (A & B & C) | (A & B & D)
-            // (A | B) & (C & D) --> (C & D & A) | (C & D & B)
-            // (A | B) & (C | D) --> (A & C) | (A & D) | (B & C) | (B & D)
+            // (A & B) & (C & D) - -> (A & B & C & D)
+            // (A & B) & (C | D) - -> (A & B & C) | (A & B & D)
+            // (A | B) & (C & D) - -> (C & D & A) | (C & D & B)
+            // (A | B) & (C | D) - -> (A & C) | (A & D) | (B & C) | (B & D)
             // Case 1 is a merge.
             if (__PRIVATE_hardAssert(e.filters.length > 0 && t.filters.length > 0), __PRIVATE_compositeFilterIsConjunction(e) && __PRIVATE_compositeFilterIsConjunction(t)) return __PRIVATE_compositeFilterWithAddedFilters(e, t.getFilters());
             // Case 2,3,4 all have at least one side (lhs or rhs) that is a disjunction. In all three cases
@@ -10681,8 +10681,8 @@
 
     function __PRIVATE_applyDistributionFieldAndCompositeFilters(e, t) {
         // There are two cases:
-        // A & (B & C) --> (A & B & C)
-        // A & (B | C) --> (A & B) | (A & C)
+        // A & (B & C) - -> (A & B & C)
+        // A & (B | C) - -> (A & B) | (A & C)
         if (__PRIVATE_compositeFilterIsConjunction(t)) 
         // Case 1
         return __PRIVATE_compositeFilterWithAddedFilters(t, e.getFilters());
@@ -20874,8 +20874,8 @@ tr:hover td{background:rgba(245,196,0,.04)}
 </head>
 <body>
 
-<!-- LOADING -->
-<!-- SELECTOR SUCURSAL -->
+<!-- LOADING - ->
+<!-- SELECTOR SUCURSAL - ->
 <div id="sel-screen" style="display:flex;position:fixed;inset:0;background:var(--bg-page);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:24px">
   <div style="font-size:56px">⚡</div>
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:1px;color:var(--tx)">ELECTRICIDAD PALAVECINO</div>
@@ -20894,7 +20894,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       🔑 Administrador
     </button>
   </div>
-  <!-- PIN admin en selector -->
+  <!-- PIN admin en selector - ->
   <div id="sel-pin-wrap" style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:8px">
     <div style="font-size:13px;color:var(--tx2)">Ingresa PIN de administrador</div>
     <div style="display:flex;gap:10px" id="sel-pin-dots">
@@ -20922,9 +20922,9 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div style="font-size:10px;color:var(--tx3);margin-top:8px">Desarrollado por Luis Felipe Palavecino Cárcamos</div>
 </div>
 
-<!-- PIN SCREEN -->
+<!-- PIN SCREEN - ->
 <div id="app" style="display:none">
-<!-- SIDEBAR -->
+<!-- SIDEBAR - ->
 <div id="sidebar">
   <div class="logo-area">
     <div class="logo-wrap">
@@ -20956,7 +20956,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div class="sidebar-footer"><b style="color:var(--am)">Electricidad Palavecino</b><br>v4.0 · IndexedDB<br><span style="color:var(--tx3);font-size:10px">Desarrollado por<br>Luis F. Palavecino C.</span></div>
 </div>
 
-<!-- MAIN -->
+<!-- MAIN - ->
 <div id="main">
   <div class="topbar">
     <div class="topbar-title" id="page-title">Dashboard</div>
@@ -20970,7 +20970,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 
   <div id="content">
 
-    <!-- DASHBOARD -->
+    <!-- DASHBOARD - ->
     <div class="page active" id="page-dashboard">
       <div id="search-results" style="display:none;margin-bottom:18px"></div>
       <div class="kpi-grid">
@@ -20990,7 +20990,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       </div>
     </div>
 
-    <!-- CLIENTES -->
+    <!-- CLIENTES - ->
     <div class="page" id="page-clientes">
       <div class="section-header">
         <h2>👥 Clientes</h2>
@@ -21008,7 +21008,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card"><div class="tw"><table><thead><tr><th>RUT</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Categoría</th><th>Saldo</th><th>Acciones</th></tr></thead><tbody id="tbl-clientes"></tbody></table></div></div>
     </div>
 
-    <!-- PROVEEDORES -->
+    <!-- PROVEEDORES - ->
     <div class="page" id="page-proveedores">
       <div class="section-header">
         <h2>🏭 Proveedores</h2>
@@ -21022,7 +21022,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card"><div class="tw"><table><thead><tr><th>RUT</th><th>Empresa</th><th>Contacto</th><th>Teléfono</th><th>Condición</th><th>Productos</th><th>Última Compra</th><th>Acciones</th></tr></thead><tbody id="tbl-proveedores"></tbody></table></div></div>
     </div>
 
-    <!-- INVENTARIO -->
+    <!-- INVENTARIO - ->
     <div class="page" id="page-inventario">
       <div class="section-header">
         <h2>📦 Inventario</h2>
@@ -21045,7 +21045,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card"><div class="tw"><table><thead><tr><th>SKU</th><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mín.</th><th>P.Costo</th><th>P.Venta</th><th>Margen</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbl-inventario"></tbody></table></div></div>
     </div>
 
-    <!-- VENTAS -->
+    <!-- VENTAS - ->
     <div class="page" id="page-ventas">
       <div class="section-header">
         <h2>🧾 Ventas</h2>
@@ -21065,7 +21065,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card"><div class="tw"><table><thead><tr><th>Folio</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Tipo</th><th>Pago</th><th>Acciones</th></tr></thead><tbody id="tbl-ventas"></tbody></table></div></div>
     </div>
 
-    <!-- COTIZACIONES -->
+    <!-- COTIZACIONES - ->
     <div class="page" id="page-cotizaciones">
       <div class="section-header">
         <h2>📋 Cotizaciones</h2>
@@ -21081,7 +21081,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card"><div class="tw"><table><thead><tr><th>N°</th><th>Cliente</th><th>Fecha</th><th>Válida Hasta</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tbl-cotizaciones"></tbody></table></div></div>
     </div>
 
-    <!-- PEDIDOS EN PREPARACIÓN -->
+    <!-- PEDIDOS EN PREPARACIÓN - ->
     <div class="page" id="page-pedidos">
       <div class="section-header">
         <h2>🔧 Pedidos en Preparación</h2>
@@ -21101,7 +21101,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
     </div>
 
 
-    <!-- COMPRAS / FACTURAS SII -->
+    <!-- COMPRAS / FACTURAS SII - ->
     <div class="page" id="page-compras">
       <div class="section-header">
         <h2>📥 Compras / Facturas SII</h2>
@@ -21118,15 +21118,15 @@ tr:hover td{background:rgba(245,196,0,.04)}
     </div>
 
 
-    <!-- VISTA CONSOLIDADA (solo admin) -->
+    <!-- VISTA CONSOLIDADA (solo admin) - ->
     <div class="page" id="page-consolidado">
       <div class="section-header">
         <h2>🏢 Vista Consolidada — Ambas Sucursales</h2>
         <button class="btn btn-secondary btn-sm" onclick="renderConsolidado()">🔄 Actualizar</button>
       </div>
-      <!-- KPIs consolidados -->
+      <!-- KPIs consolidados - ->
       <div class="kpi-grid" id="cons-kpis" style="margin-bottom:18px"></div>
-      <!-- Ventas por sucursal -->
+      <!-- Ventas por sucursal - ->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
         <div class="card">
           <div class="card-title">🏪 Sucursal 1 — Ventas hoy</div>
@@ -21139,7 +21139,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
           <div id="cons-ventas-s2-cnt" style="font-size:12px;color:var(--tx2)">0 ventas</div>
         </div>
       </div>
-      <!-- Stock consolidado -->
+      <!-- Stock consolidado - ->
       <div class="card">
         <div class="card-title">📦 Stock Comparado por Producto</div>
         <div class="toolbar" style="margin-bottom:10px">
@@ -21157,7 +21157,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       </div>
     </div>
 
-    <!-- CAJA -->    <div class="page" id="page-caja">
+    <!-- CAJA - ->    <div class="page" id="page-caja">
       <div class="section-header"><h2>💰 Caja Diaria</h2></div>
       <div class="tabnav">
         <button class="tabbtn active" onclick="switchTab('caja','resumen',this)">Resumen</button>
@@ -21196,7 +21196,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       </div>
     </div>
 
-    <!-- HISTORIAL -->
+    <!-- HISTORIAL - ->
     <div class="page" id="page-historial">
       <div class="section-header">
         <h2>📝 Historial de Cambios</h2>
@@ -21212,7 +21212,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="card" id="hist-lista" style="font-size:13px"></div>
     </div>
 
-    <!-- CONFIGURACIÓN -->
+    <!-- CONFIGURACIÓN - ->
     <div class="page" id="page-configuracion">
       <div class="section-header"><h2>⚙️ Configuración</h2></div>
       <div class="grid2">
@@ -21293,9 +21293,9 @@ tr:hover td{background:rgba(245,196,0,.04)}
 </div>
 </div>
 
-<!-- ===== MODALES ===== -->
+<!-- ===== MODALES ===== - ->
 
-<!-- CLIENTE -->
+<!-- CLIENTE - ->
 <div class="overlay" id="modal-cliente"><div class="modal">
   <h3>👤 <span id="tit-cliente">Nuevo Cliente</span></h3>
   <input type="hidden" id="cli-id">
@@ -21315,7 +21315,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- PROVEEDOR -->
+<!-- PROVEEDOR - ->
 <div class="overlay" id="modal-proveedor"><div class="modal">
   <h3>🏭 <span id="tit-prov">Nuevo Proveedor</span></h3>
   <input type="hidden" id="prov-id">
@@ -21335,7 +21335,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- PRODUCTO -->
+<!-- PRODUCTO - ->
 <div class="overlay" id="modal-producto"><div class="modal">
   <h3>📦 <span id="tit-prod">Nuevo Producto</span></h3>
   <input type="hidden" id="prod-id">
@@ -21358,7 +21358,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- NUEVA VENTA -->
+<!-- NUEVA VENTA - ->
 <div class="overlay" id="modal-nueva-venta"><div class="modal xl">
   <h3>🧾 Nueva Venta</h3>
   <div class="fgrid" style="margin-bottom:14px">
@@ -21368,7 +21368,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
     </div>
     <div class="fg"><label>Tipo Documento</label><select id="venta-tipo"><option>Boleta</option><option>Factura</option><option>Nota de Venta</option></select></div>
   </div>
-  <!-- FAVORITOS -->
+  <!-- FAVORITOS - ->
   <div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">⭐ Más vendidos</div>
   <div class="favs-grid" id="favs-grid"></div>
   <div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Detalle de Productos</div>
@@ -21390,7 +21390,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- COTIZACIÓN -->
+<!-- COTIZACIÓN - ->
 <div class="overlay" id="modal-cotizacion"><div class="modal wide">
   <h3>📋 Nueva Cotización</h3>
   <div class="fgrid" style="margin-bottom:14px">
@@ -21408,7 +21408,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- VER VENTA -->
+<!-- VER VENTA - ->
 <div class="overlay" id="modal-ver-venta"><div class="modal">
   <h3>🧾 Detalle de Venta</h3>
   <div id="ver-venta-body"></div>
@@ -21418,7 +21418,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- IMPRESIÓN BOLETA -->
+<!-- IMPRESIÓN BOLETA - ->
 <div class="overlay" id="modal-print-venta"><div class="modal wide">
   <h3>🖨 Vista de Impresión</h3>
   <div id="print-doc-wrap"></div>
@@ -21428,7 +21428,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- CIERRE DEL DÍA -->
+<!-- CIERRE DEL DÍA - ->
 <div class="overlay" id="modal-cierre-dia"><div class="modal wide">
   <h3>📋 Cierre del Día</h3>
   <div id="cierre-dia-body"></div>
@@ -21438,7 +21438,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- ORDEN DE COMPRA -->
+<!-- ORDEN DE COMPRA - ->
 <div class="overlay" id="modal-orden-compra"><div class="modal wide">
   <h3>📦 Orden de Compra — Stock Bajo</h3>
   <div id="orden-compra-body"></div>
@@ -21449,7 +21449,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- PEDIDO DETALLE -->
+<!-- PEDIDO DETALLE - ->
 <div class="overlay" id="modal-pedido"><div class="modal wide">
   <h3>🔧 <span id="tit-pedido">Pedido en Preparación</span></h3>
   <input type="hidden" id="ped-id">
@@ -21482,11 +21482,11 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- NUEVA COMPRA / LECTOR FACTURA -->
+<!-- NUEVA COMPRA / LECTOR FACTURA - ->
 <div class="overlay" id="modal-nueva-compra"><div class="modal" style="width:780px;max-width:97vw">
   <h3>📥 Leer Factura del SII</h3>
 
-  <!-- STEP 1: UPLOAD -->
+  <!-- STEP 1: UPLOAD - ->
   <div id="compra-step1">
     <div class="al al-info" style="margin-bottom:14px">
       ⚡ Sube el PDF de la factura descargado desde el SII. La IA extraerá automáticamente proveedor, N° factura, fecha e ítems.
@@ -21502,7 +21502,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <input type="file" id="factura-pdf" accept=".pdf" style="display:none" onchange="procesarFacturaPDF(event)">
   </div>
 
-  <!-- STEP 2: AI PROCESSING -->
+  <!-- STEP 2: AI PROCESSING - ->
   <div id="compra-step2" style="display:none">
     <div class="ai-thinking" id="ai-thinking">
       <div class="ai-spin">⚡</div>
@@ -21513,9 +21513,9 @@ tr:hover td{background:rgba(245,196,0,.04)}
     </div>
   </div>
 
-  <!-- STEP 3: REVIEW & CONFIRM -->
+  <!-- STEP 3: REVIEW & CONFIRM - ->
   <div id="compra-step3" style="display:none">
-    <!-- Datos de la factura -->
+    <!-- Datos de la factura - ->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:16px">
       <div class="fg"><label>N° Factura</label><input id="c-nfactura" placeholder="12345"></div>
       <div class="fg"><label>Proveedor</label><input id="c-proveedor" placeholder="Nombre proveedor"></div>
@@ -21523,7 +21523,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       <div class="fg"><label>Fecha</label><input id="c-fecha" type="date"></div>
     </div>
 
-    <!-- Ítems extraídos -->
+    <!-- Ítems extraídos - ->
     <div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">
       Ítems extraídos
     </div>
@@ -21538,7 +21538,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div id="compra-items-lista" style="max-height:280px;overflow-y:auto"></div>
     <button class="btn btn-secondary btn-xs" onclick="addCompraItem()" style="margin-top:8px">+ Agregar ítem manualmente</button>
 
-    <!-- Totales -->
+    <!-- Totales - ->
     <div class="tbox" style="margin-top:14px">
       <div class="trow"><span style="color:var(--tx2)">Neto</span><span id="c-neto">$0</span></div>
       <div class="trow"><span style="color:var(--tx2)">IVA (19%)</span><span id="c-iva">$0</span></div>
@@ -21554,7 +21554,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- DETALLE COMPRA -->
+<!-- DETALLE COMPRA - ->
 <div class="overlay" id="modal-ver-compra"><div class="modal wide">
   <h3>📄 Detalle de Factura</h3>
   <div id="ver-compra-body"></div>
@@ -21563,7 +21563,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- ACCESO CONFIGURACIÓN -->
+<!-- ACCESO CONFIGURACIÓN - ->
 <div class="overlay" id="modal-acceso-config"><div class="modal" style="max-width:380px;text-align:center">
   <h3 style="justify-content:center">🔐 Acceso Restringido</h3>
   <div style="font-size:13px;color:var(--tx2);margin-bottom:18px">El módulo de Configuración es solo para el <strong style="color:var(--am)">Administrador</strong>.<br>Ingresa la contraseña para continuar.</div>
@@ -21591,7 +21591,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div></div>
 
-<!-- IMPORTAR -->
+<!-- IMPORTAR - ->
 <div class="overlay" id="modal-import"><div class="modal">
   <h3>📥 Importar Excel / CSV</h3>
   <div id="import-info" style="font-size:12px;color:var(--tx2);margin-bottom:14px;padding:10px;background:var(--bg-input);border-radius:8px;white-space:pre-line"></div>
