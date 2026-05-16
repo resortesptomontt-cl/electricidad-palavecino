@@ -1170,27 +1170,7 @@ const SUC_PINS = {
 
 let fbApp;
 
-async function initDB(){
-  // Wait for firebase bundle to load (loaded via separate script tag)
-  let attempts = 0;
-  while(!window.__FIREBASE_READY__ && attempts < 50){
-    await new Promise(r => setTimeout(r, 100));
-    attempts++;
-  }
-  if(!window.__FIREBASE_READY__){
-    throw new Error('Firebase no pudo inicializar. Intenta recargar la página.');
-  }
-  // Initialize app (avoid duplicate initialization)
-  const existingApps = _fbGetApps();
-  if(existingApps.length > 0){
-    fbApp = existingApps[0];
-  } else {
-    fbApp = _fbInitializeApp(FIREBASE_CONFIG);
-  }
-  fsDB = _fbGetFirestore(fbApp);
-  // Skip persistence to avoid connection issues
-  // await _fbEnablePersistence(fsDB);
-}
+// initDB — REST API (definida en la capa REST arriba)
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
 // Compartidas: inventario_cat, proveedores, config
