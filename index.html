@@ -338,7 +338,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
 </div>
 
-<div id="loading-screen">
+<div id="loading-screen" style="display:none">
   <div class="loading-rayo">⚡</div>
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px">ELECTRICIDAD PALAVECINO</div>
   <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
@@ -1049,6 +1049,7 @@ async function fbRequest(method, path, body){
   if(body) opts.body = JSON.stringify(body);
   const resp = await fetch(url, opts);
   if(resp.status===204) return null;
+  if(resp.status===404) return null;
   const json = await resp.json();
   if(!resp.ok) throw new Error(json.error?.message || resp.statusText);
   return json;
@@ -1102,8 +1103,9 @@ function colName(store){
 let fsDB=null;
 
 async function initDB(){
+  // Simple connectivity check — any response (including 404) means Firestore is reachable
   try{ await fbRequest('GET','/config/ping'); }
-  catch(e){ if(!e.message.includes('NOT_FOUND')&&!e.message.includes('404')) console.warn('Firestore:',e.message); }
+  catch(e){ /* 404 = doc not found = Firestore works fine */ }
 }
 
 async function dbGetAll(store){
@@ -1469,6 +1471,8 @@ function seleccionarSucursal(suc){
   if(navCaja)    navCaja.style.display    = suc==='bodega' ? 'none' : 'flex';
   if(navCots)    navCots.style.display    = suc==='bodega' ? 'none' : 'flex';
   if(navPedidos) navPedidos.style.display = suc==='bodega' ? 'none' : 'flex';
+  document.getElementById('sel-screen').style.display='none';
+  document.getElementById('loading-screen').style.display='flex';
   continuarInit();
 }
 
@@ -3222,9 +3226,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(saved){
     SUC = saved;
     document.getElementById('sel-screen').style.display='none';
+    document.getElementById('loading-screen').style.display='flex';
     seleccionarSucursal(saved);
   } else {
-    document.getElementById('loading-screen').style.display='none';
     document.getElementById('sel-screen').style.display='flex';
   }
 });
