@@ -6,6 +6,8 @@
 <title>Electricidad Palavecino — Sistema de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1040,7 +1042,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 
 </body>
 </html>
-<script src="firebase-bundle.js"></script>
+
 <script>
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
@@ -1072,25 +1074,21 @@ const FIREBASE_CONFIG = {
 let fbApp, fsDB;
 
 async function initDB(){
-  // Wait for firebase bundle to load (loaded via separate script tag)
+  // Wait for Firebase CDN to load
   let attempts = 0;
-  while(!window.__FIREBASE_READY__ && attempts < 50){
+  while(typeof firebase === 'undefined' && attempts < 50){
     await new Promise(r => setTimeout(r, 100));
     attempts++;
   }
-  if(!window.__FIREBASE_READY__){
-    throw new Error('Firebase no pudo inicializar. Intenta recargar la página.');
+  if(typeof firebase === 'undefined'){
+    throw new Error('Firebase no cargó. Verifica tu conexión a internet.');
   }
-  // Initialize app (avoid duplicate initialization)
-  const existingApps = _fbGetApps();
-  if(existingApps.length > 0){
-    fbApp = existingApps[0];
+  if(!firebase.apps.length){
+    fbApp = firebase.initializeApp(FIREBASE_CONFIG);
   } else {
-    fbApp = _fbInitializeApp(FIREBASE_CONFIG);
+    fbApp = firebase.app();
   }
-  fsDB = _fbGetFirestore(fbApp);
-  // Skip persistence to avoid connection issues
-  // await _fbEnablePersistence(fsDB);
+  fsDB = firebase.firestore();
 }
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
@@ -1105,12 +1103,12 @@ function colName(store){
   return `${store}_${SUC}`;
 }
 function col(store){
-  return _fbCollection(fsDB, colName(store));
+  return fsDB.collection(colName(store));
 }
 
 // ── DB FUNCTIONS (same API as IndexedDB) ─────────────────
 async function dbGetAll(store){
-  const snap = await _fbGetDocs(col(store));
+  const snap = await col(store).get();
   return snap.docs.map(d=>({...d.data(), id:d.id}));
 }
 
@@ -1122,7 +1120,7 @@ async function dbAdd(store, data){
     d.sucursal = SUC;
     d.ts = Date.now();
   }
-  const ref = await _fbAddDoc(col(store), d);
+  const ref = await col(store).add(d);
   return ref.id;
 }
 
@@ -1131,33 +1129,30 @@ async function dbPut(store, data){
   const id = d.id;
   delete d.id;
   if(!id){ return dbAdd(store, data); }
-  const docRef = _fbDoc(fsDB, colName(store), String(id));
-  await _fbSetDoc(docRef, d, {merge:true});
+  await col(store).doc(String(id)).set(d, {merge:true});
   return id;
 }
 
 async function dbDelete(store, id){
-  const docRef = _fbDoc(fsDB, colName(store), String(id));
-  await _fbDeleteDoc(docRef);
+  await col(store).doc(String(id)).delete();
 }
 
 async function dbGetConfig(k){
-  const docRef = _fbDoc(fsDB, 'config', k);
-  const snap = await _fbGetDoc(docRef);
-  return snap.exists() ? snap.data().value : null;
+  const snap = await fsDB.collection('config').doc(k).get();
+  return snap.exists ? snap.data().value : null;
 }
 
 async function dbSetConfig(k,v){
-  await _fbSetDoc(_fbDoc(fsDB, 'config', k), {value:v});
+  await fsDB.collection('config').doc(k).set({value:v});
 }
 
 // ── STOCK POR SUCURSAL ──────────────────────────────────────
 async function getStockSucursal(sku){
-  const snap = await _fbGetDoc(_fbDoc(fsDB, 'stock_'+SUC, sku));
-  return snap.exists() ? snap.data() : {stock:0, min:1};
+  const snap = await fsDB.collection('stock_'+SUC).doc(sku).get();
+  return snap.exists ? snap.data() : {stock:0, min:1};
 }
 async function setStockSucursal(sku, stock, min){
-  await _fbSetDoc(_fbDoc(fsDB, 'stock_'+SUC, sku), {stock, min}, {merge:true});
+  await fsDB.collection('stock_'+SUC).doc(sku).set({stock, min}, {merge:true});
 }
 //  HISTORIAL DE CAMBIOS
 // ================================================================
@@ -1245,7 +1240,7 @@ async function reloadAll(){
   // Load catalog (shared inventory)
   const cat = await dbGetAll('inventario');
   // Merge with branch stock
-  const stockSnap = await _fbGetDocs(_fbCollection(fsDB, 'stock_'+SUC));
+  const stockSnap = await fsDB.collection('stock_'+SUC).get();
   const stockMap = {};
   stockSnap.docs.forEach(d=>{ stockMap[d.id]=d.data(); });
   MEM.inventario = cat.map(p=>({
@@ -2201,8 +2196,8 @@ function renderHistorial(){
 }
 async function limpiarHistorial(){
   if(!confirm('¿Limpiar todo el historial de cambios?')) return;
-  const snap = await _fbGetDocs(_fbCollection(fsDB, colName('historial')));
-  for(const d of snap.docs) await _fbDeleteDoc(d.ref);
+  const snap = await fsDB.collection(colName('historial').get());
+  for(const d of snap.docs) await d.ref.delete();
   MEM.historial=[];
   renderHistorial(); toast('Historial limpiado','rojo');
 }
@@ -2272,8 +2267,8 @@ async function restaurarBackup(ev){
     const data=JSON.parse(txt);
     // Limpiar colecciones antes de restaurar
     for(const store of ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras']){
-      const snap = await _fbGetDocs(_fbCollection(fsDB, colName(store)));
-      for(const d of snap.docs) await _fbDeleteDoc(d.ref);
+      const snap = await fsDB.collection(colName(store).get());
+      for(const d of snap.docs) await d.ref.delete();
     }
     // Restaurar datos
     for(const x of (data.clientes||[]))     await dbAdd('clientes',x);
@@ -2289,7 +2284,22 @@ async function restaurarBackup(ev){
     toast('Respaldo restaurado ✅');
   } catch(e){ toast('Error al leer el archivo','rojo'); }
 }
-// limpiarDB — ver versión Firebase más arriba
+async function limpiarDB(){
+  if(!confirm('⛔ ¿Borrar TODOS los datos de esta sucursal?')) return;
+  if(!confirm('¿Estás completamente seguro? Esta acción no se puede deshacer.')) return;
+  toast('Eliminando datos...','azul');
+  try {
+    const sucCols = ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras'];
+    for(const store of sucCols){
+      const snap = await fsDB.collection(colName(store)).get();
+      for(const d of snap.docs) await d.ref.delete();
+    }
+    const stockSnap = await fsDB.collection('stock_'+SUC).get();
+    for(const d of stockSnap.docs) await d.ref.delete();
+    await reloadAll(); updateDash();
+    toast('Datos eliminados ✅','rojo');
+  } catch(e){ toast('Error: '+e.message,'rojo'); }
+}
 
 // ================================================================
 //  IMPORTAR / EXPORTAR
@@ -2948,11 +2958,11 @@ async function renderConsolidado(){
   try {
     // Load ventas from both branches
     const [v1snap, v2snap, inv_snap, stock1snap, stock2snap] = await Promise.all([
-      _fbGetDocs(_fbCollection(fsDB, 'ventas_s1')),
-      _fbGetDocs(_fbCollection(fsDB, 'ventas_s2')),
-      _fbGetDocs(_fbCollection(fsDB, 'inventario_cat')),
-      _fbGetDocs(_fbCollection(fsDB, 'stock_s1')),
-      _fbGetDocs(_fbCollection(fsDB, 'stock_s2')),
+      fsDB.collection('ventas_s1').get(),
+      fsDB.collection('ventas_s2').get(),
+      fsDB.collection('inventario_cat').get(),
+      fsDB.collection('stock_s1').get(),
+      fsDB.collection('stock_s2').get(),
     ]);
 
     const ventas1 = v1snap.docs.map(d=>d.data());
@@ -3069,7 +3079,7 @@ async function cargarPins(){
 // ================================================================
 //  INICIO
 // ================================================================
-async function init(){
+async function continuarInit(){
   try{
     setMsg('Abriendo base de datos...');
     await initDB();
@@ -3100,7 +3110,20 @@ async function init(){
   }
 }
 
-init();
+window.addEventListener('DOMContentLoaded', ()=>{
+  // Show sucursal selector — continuarInit() is called after PIN
+  const saved = sessionStorage.getItem('ep_sucursal');
+  if(saved){
+    // Already selected in this session — go straight in
+    SUC = saved;
+    document.getElementById('sel-screen').style.display = 'none';
+    seleccionarSucursal(saved);
+  } else {
+    // Show selector, hide loading screen
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('sel-screen').style.display = 'flex';
+  }
+});
 
 </script>
 </html>
