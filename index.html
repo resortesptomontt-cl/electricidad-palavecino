@@ -3190,9 +3190,12 @@ async function continuarInit(){
     document.getElementById('db-status-badge').textContent='🔥 Firebase conectado';
     document.getElementById('db-status-badge').className='db-status db-ok';
   } catch(err){
-    setMsg('Error: '+err.message);
-    document.getElementById('db-status-badge').textContent='⛔ Error DB';
-    document.getElementById('db-status-badge').className='db-status db-err';
+    console.error('continuarInit error:', err);
+    // Show selector again so user can retry
+    sessionStorage.removeItem('ep_sucursal');
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('sel-screen').style.display='flex';
+    toast('Error al conectar: '+err.message+' — intenta de nuevo','rojo');
   }
 }
 
@@ -3222,15 +3225,9 @@ async function dbGetAllRaw(colPath){
 
 // ── DOMContentLoaded ──────────────────────────────────────
 window.addEventListener('DOMContentLoaded', ()=>{
-  const saved = sessionStorage.getItem('ep_sucursal');
-  if(saved){
-    SUC = saved;
-    document.getElementById('sel-screen').style.display='none';
-    document.getElementById('loading-screen').style.display='flex';
-    seleccionarSucursal(saved);
-  } else {
-    document.getElementById('sel-screen').style.display='flex';
-  }
+  // Always show selector on load — clear any stale session
+  sessionStorage.removeItem('ep_sucursal');
+  document.getElementById('sel-screen').style.display='flex';
 });
 
 </script>
