@@ -1073,6 +1073,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  FIRESTORE REST API — sin SDK, funciona en cualquier browser
 // ════════════════════════════════════════════════════════════════
@@ -1146,8 +1147,18 @@ async function initDB(){
 
 async function dbGetAll(store){
   try{
-    const d=await fbRequest('GET','/'+colName(store));
-    return d?.documents ? d.documents.map(fromFS).filter(Boolean) : [];
+    const col = colName(store);
+    let all = [];
+    let pageToken = null;
+    // Firestore REST paginates at 300 docs — loop until done
+    do {
+      const url = '/'+col+(pageToken?'?pageToken='+encodeURIComponent(pageToken):'');
+      const d = await fbRequest('GET', url);
+      if(!d) break;
+      if(d.documents) all = all.concat(d.documents.map(fromFS).filter(Boolean));
+      pageToken = d.nextPageToken || null;
+    } while(pageToken);
+    return all;
   }catch(e){ console.warn('dbGetAll',store,e.message); return []; }
 }
 async function dbAdd(store,data){
@@ -1195,6 +1206,7 @@ async function fbDeleteCollection(colPath){
   const docs = await fbGetCollection(colPath);
   for(const d of docs) await fbRequest('DELETE','/'+colPath+'/'+d.id).catch(()=>{});
 }
+
 
 
 
