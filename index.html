@@ -1195,6 +1195,8 @@ async function fbDeleteCollection(colPath){
 
 
 
+
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -3186,20 +3188,106 @@ async function continuarInit(){
 
 // ── limpiarDB: Firebase version ───────────────────────────
 async function limpiarDB(){
-  if(!confirm('⛔ ¿Borrar TODOS los datos de esta sucursal?')) return;
-  if(!confirm('¿Estás completamente seguro? Esta acción no se puede deshacer.')) return;
-  toast('Eliminando datos...','azul');
-  try {
-    const sucCols = ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras'];
-    for(const store of sucCols){
-      const docs = await dbGetAll(store);
-      for(const d of docs) await dbDelete(store, d.id);
+  // Show options modal
+  const m = document.createElement('div');
+  m.className='overlay open'; m.id='modal-limpiar';
+  m.innerHTML=`<div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+    <div class="modal-header"><h3>🗑 Borrar Datos</h3>
+      <button class="btn-close" onclick="document.getElementById('modal-limpiar').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--tx2);font-size:13px;margin-bottom:16px">Selecciona qué datos quieres eliminar. Esta acción <strong style="color:var(--rjtx)">no se puede deshacer</strong>.</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-danger" style="justify-content:flex-start;gap:10px" onclick="limpiarSucursal('s1')">
+          🏪 Borrar datos Casa Matriz (S1)<br>
+          <small style="font-weight:400;opacity:0.8">Inventario, clientes, ventas, caja, cotizaciones</small>
+        </button>
+        <button class="btn btn-danger" style="justify-content:flex-start;gap:10px" onclick="limpiarSucursal('s2')">
+          🏪 Borrar datos Los Muermos (S2)<br>
+          <small style="font-weight:400;opacity:0.8">Inventario, clientes, ventas, caja, cotizaciones</small>
+        </button>
+        <button class="btn btn-danger" style="justify-content:flex-start;gap:10px" onclick="limpiarSucursal('bodega')">
+          🏭 Borrar datos Bodega<br>
+          <small style="font-weight:400;opacity:0.8">Inventario bodega, compras, historial</small>
+        </button>
+        <button class="btn btn-secondary" style="justify-content:flex-start;gap:10px;border-color:var(--rj)" onclick="limpiarCompartidos()">
+          🌐 Borrar datos compartidos<br>
+          <small style="font-weight:400;opacity:0.8">Proveedores, pedidos</small>
+        </button>
+        <div style="border-top:2px solid var(--rj);margin:4px 0;padding-top:10px">
+          <button class="btn btn-danger" style="width:100%;justify-content:center;background:var(--rj)" onclick="limpiarTodo()">
+            ⛔ BORRAR TODO EL SISTEMA<br>
+            <small style="font-weight:400">Todas las sucursales + datos compartidos</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  m.onclick=e=>{if(e.target===m)m.remove();};
+  document.body.appendChild(m);
+}
+
+async function limpiarSucursal(suc){
+  const nombres={s1:'Casa Matriz',s2:'Los Muermos',bodega:'Bodega'};
+  if(!confirm('¿Borrar TODOS los datos de '+nombres[suc]+'? Esta acción no se puede deshacer.')) return;
+  document.getElementById('modal-limpiar')?.remove();
+  toast('Eliminando datos de '+nombres[suc]+'...','azul');
+  try{
+    const cols = suc==='bodega'
+      ? ['inventario_bodega','historial_bodega','compras_bodega']
+      : ['inventario_'+suc,'clientes_'+suc,'ventas_'+suc,'cotizaciones_'+suc,
+         'caja_mov_'+suc,'historial_'+suc,'compras_'+suc];
+    for(const col of cols){
+      const docs=await fbGetCollection(col);
+      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
     }
-    const stockDocs = await dbGetAllRaw('stock_'+SUC);
-    for(const d of stockDocs) await fbRequest('DELETE', '/stock_'+SUC+'/'+d.id);
+    // Also delete pedidos from this sucursal
+    if(suc!=='bodega'){
+      const peds=await fbGetCollection('pedidos');
+      const mine=peds.filter(p=>p.origen===suc);
+      for(const d of mine) await fbRequest('DELETE','/pedidos/'+d.id).catch(()=>{});
+    }
     await reloadAll(); updateDash();
-    toast('Datos eliminados','rojo');
-  } catch(e){ toast('Error: '+e.message,'rojo'); }
+    toast('✅ Datos de '+nombres[suc]+' eliminados','rojo');
+  }catch(e){toast('Error: '+e.message,'rojo');}
+}
+
+async function limpiarCompartidos(){
+  if(!confirm('¿Borrar proveedores y pedidos compartidos?')) return;
+  document.getElementById('modal-limpiar')?.remove();
+  toast('Eliminando datos compartidos...','azul');
+  try{
+    for(const col of ['proveedores','pedidos']){
+      const docs=await fbGetCollection(col);
+      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
+    }
+    await reloadAll(); updateDash();
+    toast('✅ Datos compartidos eliminados','rojo');
+  }catch(e){toast('Error: '+e.message,'rojo');}
+}
+
+async function limpiarTodo(){
+  if(!confirm('⛔ ¿Borrar ABSOLUTAMENTE TODOS los datos del sistema?')) return;
+  if(!confirm('Segunda confirmación: esto borrará todas las sucursales sin excepción. ¿Continuar?')) return;
+  document.getElementById('modal-limpiar')?.remove();
+  toast('Eliminando todo el sistema...','azul');
+  try{
+    const cols=[
+      'inventario_s1','clientes_s1','ventas_s1','cotizaciones_s1','caja_mov_s1','historial_s1','compras_s1',
+      'inventario_s2','clientes_s2','ventas_s2','cotizaciones_s2','caja_mov_s2','historial_s2','compras_s2',
+      'inventario_bodega','historial_bodega','compras_bodega',
+      'pedidos','proveedores','config'
+    ];
+    for(const col of cols){
+      const docs=await fbGetCollection(col);
+      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
+    }
+    MEM.clientes=[]; MEM.ventas=[]; MEM.cotizaciones=[];
+    MEM.inventario=[]; MEM.pedidos=[]; MEM.proveedores=[];
+    MEM.movimientos=[]; MEM.historial=[]; MEM.compras=[];
+    updateDash();
+    toast('✅ Sistema limpio','rojo');
+  }catch(e){toast('Error: '+e.message,'rojo');}
 }
 async function dbGetAllRaw(colPath){
   try{
@@ -3214,6 +3302,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
+
 
 
 
