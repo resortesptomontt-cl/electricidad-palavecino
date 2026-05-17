@@ -1074,6 +1074,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  FIRESTORE REST API — sin SDK, funciona en cualquier browser
 // ════════════════════════════════════════════════════════════════
@@ -1134,7 +1135,9 @@ function colName(store){
   if(store==='config')      return 'config';
   if(store==='proveedores') return 'proveedores';
   if(store==='pedidos')     return 'pedidos';
-  return store+'_'+SUC;
+  // Safety guard: if SUC is empty, default to s1 to avoid corrupt collection names
+  const suc = SUC || 's1';
+  return store+'_'+suc;
 }
 
 let fsDB=null;
@@ -1213,7 +1216,9 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 </script>T<script>
+
 
 
 
@@ -3722,10 +3727,15 @@ async function limpiarTodo(){
   toast('Eliminando todo el sistema...','azul');
   try{
     const cols=[
+      // Correct collections
       'inventario_s1','clientes_s1','ventas_s1','cotizaciones_s1','caja_mov_s1','historial_s1','compras_s1',
       'inventario_s2','clientes_s2','ventas_s2','cotizaciones_s2','caja_mov_s2','historial_s2','compras_s2',
       'inventario_bodega','historial_bodega','compras_bodega',
-      'pedidos','proveedores','config'
+      'pedidos','proveedores','config',
+      // Legacy/corrupt collections (empty SUC)
+      'inventario_cat','inventario_','clientes_','ventas_','cotizaciones_',
+      'caja_mov_','historial_','compras_','clientes_bodega','ventas_bodega',
+      'cotizaciones_bodega','caja_mov_bodega','inventario_admin','clientes_admin'
     ];
     for(const col of cols){
       const docs=await fbGetCollection(col);
@@ -3751,6 +3761,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
