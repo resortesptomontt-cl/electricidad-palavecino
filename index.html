@@ -413,6 +413,8 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="nav-item" id="nav-reportes" style="display:none" onclick="goTo('reportes',this)"><span class="nav-icon">📈</span><span>Reportes</span></div>
     <div class="nav-item" id="nav-caja-admin" style="display:none" onclick="goTo('caja_admin',this)"><span class="nav-icon">💳</span><span>Caja Sucursales</span></div>
     <div class="nav-item" id="nav-alertas" style="display:none" onclick="goTo('alertas',this)"><span class="nav-icon">🔔</span><span>Alertas</span><span class="badge-nav" id="badge-alertas"></span></div>
+    <div class="nav-item" id="nav-inv-sucursales" style="display:none" onclick="goTo('inv_sucursales',this)"><span class="nav-icon">🏪</span><span>Inventario Sucursales</span></div>
+    <div class="nav-item" id="nav-clientes-suc" style="display:none" onclick="goTo('clientes_suc',this)"><span class="nav-icon">👥</span><span>Clientes Sucursales</span></div>
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
     <div class="nav-item" onclick="pedirAccesoConfig(this)"><span class="nav-icon">⚙️</span><span>Configuración</span></div>
@@ -626,6 +628,8 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="page" id="page-caja_admin"></div>
     <!-- ALERTAS -->
     <div class="page" id="page-alertas"></div>
+    <div class="page" id="page-inv_sucursales"></div>
+    <div class="page" id="page-clientes_suc"></div>
     <!-- STOCK SUCURSALES -->
     <div class="page" id="page-stock_suc"></div>
     <!-- CAJA -->    <div class="page" id="page-caja">
@@ -1243,18 +1247,11 @@ async function fbDeleteCollection(colPath){
   snap.docs.forEach(d => batch.delete(d.ref));
   await batch.commit();
 }
-
-// ── Stock por sucursal ────────────────────────────────────
-async function getStockSucursal(sku){
-  const doc = await DB.collection('stock_' + (SUC||'s1')).doc(sku).get();
-  return doc.exists ? doc.data() : {stock:0, min:1};
-}
-async function setStockSucursal(sku, stock, min){
-  await DB.collection('stock_' + (SUC||'s1')).doc(sku).set({stock, min}, {merge:true});
-}
-
 </script>
 <script>
+
+
+
 
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
@@ -1485,32 +1482,42 @@ function goTo(page,el){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema'};
+  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema',inv_sucursales:'Inventario Sucursales',clientes_suc:'Clientes por Sucursal'};
   document.getElementById('page-title').textContent=(tits[page]||page)+' — '+(SUC_NOMBRES[SUC]||SUC);
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
-  const rend={dashboard:renderDash,clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales,reportes:renderReportes,caja_admin:renderCajaAdmin,alertas:renderAlertas};
+  const rend={dashboard:renderDash,clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales,reportes:renderReportes,caja_admin:renderCajaAdmin,alertas:renderAlertas,inv_sucursales:renderInvSucursales,clientes_suc:renderClientesSuc};
   if(rend[page]) rend[page]();
 }
 function filterTable(id,val,cols){
   document.querySelectorAll('#'+id+' tr').forEach(r=>{
+    if(r.parentElement && r.parentElement.tagName==='THEAD') return;
     const t=cols.map(c=>r.cells[c]?r.cells[c].textContent:'').join(' ').toLowerCase();
-    r.style.display=(!val||t.includes(val.toLowerCase()))?'':'none';
+    if(val && !t.includes(val.toLowerCase())){ r.style.display='none'; return; }
+    // Don't override category filter
+    if(r.style.display==='none' && !val) return;
+    if(!val) r.style.display='';
   });
 }
 function filterBySelect(id,val,col){
-  document.querySelectorAll('#'+id+' tbody tr').forEach(r=>{
-    if(!r.cells[col]){ r.style.display=''; return; }
-    // Get text including inside spans/badges
-    const c = r.cells[col].textContent.trim();
-    r.style.display=(!val||c===val||c.includes(val))?'':'none';
+  const rows = document.querySelectorAll('#'+id+' tr');
+  // Store active category filter on table element
+  const tbl = document.getElementById(id);
+  if(tbl) tbl.dataset['filterCol'+col] = val||'';
+  rows.forEach(r=>{
+    if(r.parentElement && r.parentElement.tagName==='THEAD') return;
+    if(!r.cells||r.cells.length<=col){ return; }
+    const c = r.cells[col] ? r.cells[col].textContent.trim() : '';
+    const show = !val || c===val || c.includes(val);
+    r.style.display = show ? '' : 'none';
   });
 }
 function filterStockEst(val){
   document.querySelectorAll('#tbl-inventario tr').forEach(r=>{
-    if(!val){r.style.display='';return;}
-    const e=r.cells[8]?r.cells[8].textContent.trim():'';
-    r.style.display=e.includes(val)?'':'none';
+    if(!val){ r.style.display=''; return; }
+    if(!r.cells||r.cells.length<9){ r.style.display=val?'none':''; return; }
+    const e = r.cells[8] ? r.cells[8].textContent.trim() : '';
+    r.style.display = e.includes(val) ? '' : 'none';
   });
 }
 
@@ -3963,6 +3970,119 @@ async function adminGuard(fn){
   return true;
 }
 
+
+// ════════════════════════════════════════════════════════════════
+//  MÓDULOS ADMIN — Inventario Sucursales + Clientes por Sucursal
+// ════════════════════════════════════════════════════════════════
+async function renderInvSucursales(){
+  const cont = document.getElementById('page-inv_sucursales');
+  if(!cont) return;
+  cont.innerHTML = '<div class="section-header"><h2>🏪 Inventario Sucursales</h2><button class="btn btn-secondary btn-sm" onclick="renderInvSucursales()">🔄 Actualizar</button></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
+  
+  const [invS1, invS2, invBod] = await Promise.all([
+    fbGetCollection('inventario_s1'),
+    fbGetCollection('inventario_s2'),
+    fbGetCollection('inventario_bodega'),
+  ]);
+
+  // Get active tab from url hash or default s1
+  const renderTab = (label, inv, col) => `
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <h3 style="font-size:15px;font-weight:700;color:${col}">${label} <span style="font-size:12px;color:var(--tx3);font-weight:400">(${inv.length} productos)</span></h3>
+      </div>
+      <div style="background:var(--bg-card);border-radius:10px;overflow:hidden">
+        <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
+          <table style="width:100%;font-size:12px">
+            <thead style="position:sticky;top:0;background:var(--bg-input)">
+              <tr>
+                <th style="padding:8px;text-align:left">SKU</th>
+                <th style="padding:8px;text-align:left">Producto</th>
+                <th style="padding:8px;text-align:center">Categoría</th>
+                <th style="padding:8px;text-align:center">Stock</th>
+                <th style="padding:8px;text-align:center">Mín</th>
+                <th style="padding:8px;text-align:center">Estado</th>
+                <th style="padding:8px;text-align:right">P.Venta</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${inv.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map((p,i)=>{
+                const si = p.stock>=(p.min||1)*2?{cls:'bvd',txt:'Normal'}:p.stock>=(p.min||1)?{cls:'bam',txt:'Bajo'}:{cls:'brj',txt:'Crítico'};
+                return `<tr style="border-bottom:1px solid var(--border);background:\${i%2===0?'':'var(--bg-page)'}">
+                  <td style="padding:5px 8px;color:var(--tx3);font-size:11px">\${p.sku||'—'}</td>
+                  <td style="padding:5px 8px;font-weight:500">\${p.nombre||'—'}</td>
+                  <td style="padding:5px 8px;text-align:center"><span class="badge baz" style="font-size:10px">\${p.cat||'—'}</span></td>
+                  <td style="padding:5px 8px;text-align:center;font-weight:700;color:\${(p.stock||0)<(p.min||1)?'var(--rjtx)':'var(--vdtx)'}">\${p.stock||0}</td>
+                  <td style="padding:5px 8px;text-align:center;color:var(--tx3)">\${p.min||1}</td>
+                  <td style="padding:5px 8px;text-align:center"><span class="badge \${si.cls}" style="font-size:10px">\${si.txt}</span></td>
+                  <td style="padding:5px 8px;text-align:right;color:var(--am)">\${fmt(p.venta||0)}</td>
+                </tr>`;
+              }).join('')||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--tx3)">Sin productos</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+
+  cont.innerHTML = `
+    <div class="section-header">
+      <h2>🏪 Inventario Sucursales</h2>
+      <button class="btn btn-secondary btn-sm" onclick="renderInvSucursales()">🔄 Actualizar</button>
+    </div>
+    ${renderTab('🏪 Casa Matriz — Antonio Varas 1117', invS1, 'var(--vdtx)')}
+    ${renderTab('🏪 Sucursal Los Muermos', invS2, 'var(--aztx)')}
+    ${renderTab('🏭 Bodega General', invBod, 'var(--nrtx)')}
+  `;
+}
+
+async function renderClientesSuc(){
+  const cont = document.getElementById('page-clientes_suc');
+  if(!cont) return;
+  cont.innerHTML = '<div class="section-header"><h2>👥 Clientes por Sucursal</h2></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
+  
+  const [cliS1, cliS2] = await Promise.all([
+    fbGetCollection('clientes_s1'),
+    fbGetCollection('clientes_s2'),
+  ]);
+
+  const renderCliTable = (label, clientes, col) => `
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="color:${col}">${label} <span style="font-size:11px;color:var(--tx3);font-weight:400">(${clientes.length} clientes)</span></div>
+      <div style="overflow-x:auto;max-height:350px;overflow-y:auto">
+        <table style="width:100%;font-size:12px">
+          <thead style="position:sticky;top:0;background:var(--bg-input)">
+            <tr>
+              <th style="padding:7px 8px;text-align:left">RUT</th>
+              <th style="padding:7px 8px;text-align:left">Nombre</th>
+              <th style="padding:7px 8px;text-align:center">Categoría</th>
+              <th style="padding:7px 8px;text-align:left">Teléfono</th>
+              <th style="padding:7px 8px;text-align:right">Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${clientes.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map((c,i)=>`
+              <tr style="border-bottom:1px solid var(--border);background:${i%2===0?'':'var(--bg-page)'}">
+                <td style="padding:5px 8px;color:var(--tx3)">${c.rut||'—'}</td>
+                <td style="padding:5px 8px;font-weight:500">${c.nombre||'—'}</td>
+                <td style="padding:5px 8px;text-align:center"><span class="badge" style="font-size:10px">${c.cat||'Particular'}</span></td>
+                <td style="padding:5px 8px;color:var(--tx2)">${c.tel||'—'}</td>
+                <td style="padding:5px 8px;text-align:right;color:${(c.saldo||0)>0?'var(--rjtx)':'var(--vdtx)'}">${fmt(c.saldo||0)}</td>
+              </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--tx3)">Sin clientes</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+
+  cont.innerHTML = `
+    <div class="section-header">
+      <h2>👥 Clientes por Sucursal</h2>
+      <button class="btn btn-secondary btn-sm" onclick="renderClientesSuc()">🔄 Actualizar</button>
+    </div>
+    ${renderCliTable('🏪 Casa Matriz', cliS1, 'var(--vdtx)')}
+    ${renderCliTable('🏪 Los Muermos', cliS2, 'var(--aztx)')}
+  `;
+}
+
 // ================================================================
 //  INICIO
 // ================================================================
@@ -4156,6 +4276,50 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>ntLoaded ──────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{
+  sessionStorage.removeItem('ep_sucursal');
+  // Ensure loading screen is hidden and selector is visible
+  const ls = document.getElementById('loading-screen');
+  const ss = document.getElementById('sel-screen');
+  if(ls) ls.style.display = 'none';
+  if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
+});
+
+
 
 
 
