@@ -1168,6 +1168,7 @@ async function fbDeleteCollection(colPath){
 <script>
 
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1571,7 +1572,7 @@ async function guardarCliente(){
   const nombre=document.getElementById('cli-nombre').value.trim();
   if(!nombre){ toast('El nombre es requerido','rojo'); return; }
   const obj={rut:document.getElementById('cli-rut').value.trim(),nombre,email:document.getElementById('cli-email').value.trim(),tel:document.getElementById('cli-tel').value.trim(),cat:document.getElementById('cli-cat').value,saldo:parseFloat(document.getElementById('cli-saldo').value)||0,dir:document.getElementById('cli-dir').value.trim(),notas:document.getElementById('cli-notas').value.trim()};
-  const id=parseInt(document.getElementById('cli-id').value)||null;
+  const id=document.getElementById('cli-id').value||null;
   const accion=id?'Editar':'Nuevo';
   if(id){ obj.id=id; await dbPut('clientes',obj); }
   else await dbAdd('clientes',obj);
@@ -1589,8 +1590,8 @@ function renderClientes(){
       <td><span class="badge baz">${c.cat}</span></td>
       <td>${c.saldo>0?`<span style="color:var(--nrtx);font-weight:600">${fmt(c.saldo)}</span>`:'<span style="color:var(--tx3)">—</span>'}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-secondary btn-xs" onclick="openModalCliente(${c.id})">✏️ Editar</button>
-        <button class="btn btn-danger btn-xs" onclick="delCliente(${c.id})">🗑</button>
+        <button class="btn btn-secondary btn-xs" onclick="openModalCliente('${c.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-xs" onclick=\"delCliente('\${c.id}')\">🗑</button>
       </td>
     </tr>`).join('');
 }
@@ -1618,7 +1619,7 @@ async function guardarProveedor(){
   const empresa=document.getElementById('prov-empresa').value.trim();
   if(!empresa){ toast('Nombre de empresa requerido','rojo'); return; }
   const obj={rut:document.getElementById('prov-rut').value.trim(),empresa,contacto:document.getElementById('prov-contacto').value.trim(),tel:document.getElementById('prov-tel').value.trim(),email:document.getElementById('prov-email').value.trim(),cond:document.getElementById('prov-cond').value,ultima:today(),prod:document.getElementById('prov-prod').value.trim(),dir:document.getElementById('prov-dir').value.trim()};
-  const id=parseInt(document.getElementById('prov-id').value)||null;
+  const id=document.getElementById('prov-id').value||null;
   const accion=id?'Editar':'Nuevo';
   if(id){ obj.id=id; await dbPut('proveedores',obj); }
   else await dbAdd('proveedores',obj);
@@ -1637,8 +1638,8 @@ function renderProveedores(){
       <td style="font-size:12px;color:var(--tx2)">${p.prod}</td>
       <td style="font-size:12px">${p.ultima}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-secondary btn-xs" onclick="openModalProveedor(${p.id})">✏️ Editar</button>
-        <button class="btn btn-danger btn-xs" onclick="delProv(${p.id})">🗑</button>
+        <button class="btn btn-secondary btn-xs" onclick="openModalProveedor('${p.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-xs" onclick=\"delProv('\${p.id}')\">🗑</button>
       </td>
     </tr>`).join('');
 }
@@ -1679,7 +1680,7 @@ function openModalProducto(id=null){
 async function guardarProducto(){
   const nombre=document.getElementById('prod-nombre').value.trim();
   if(!nombre){ toast('Nombre requerido','rojo'); return; }
-  const id=parseInt(document.getElementById('prod-id').value)||null;
+  const id=document.getElementById('prod-id').value||null;
   const existing=id?MEM.inventario.find(x=>x.id===id):null;
   const obj={sku:document.getElementById('prod-sku').value.trim()||'EP-'+(MEM.inventario.length+1).toString().padStart(3,'0'),nombre,cat:document.getElementById('prod-cat').value,und:document.getElementById('prod-und').value,stock:parseFloat(document.getElementById('prod-stock').value)||0,min:parseFloat(document.getElementById('prod-min').value)||5,costo:parseFloat(document.getElementById('prod-costo').value)||0,venta:parseFloat(document.getElementById('prod-venta').value)||0,prov:document.getElementById('prod-prov').value.trim(),desc:document.getElementById('prod-desc').value.trim(),ventas_count:existing?existing.ventas_count||0:0};
   const accion=id?'Editar':'Nuevo';
@@ -1707,8 +1708,8 @@ function renderInventario(){
       <td style="font-weight:600;color:${m>30?'var(--vdtx)':m>10?'var(--nrtx)':'var(--rjtx)'}">${m}%</td>
       <td><span class="badge ${si.cls}">${si.txt}</span></td>
       <td style="white-space:nowrap">
-        <button class="btn btn-secondary btn-xs" onclick="openModalProducto(${p.id})">✏️</button>
-        <button class="btn btn-danger btn-xs" onclick="delProd(${p.id})">🗑</button>
+        <button class="btn btn-secondary btn-xs" onclick="openModalProducto('${p.id}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="delProd('${p.id}')">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -1860,11 +1861,11 @@ function renderVentas(){
       <td><span class="badge bgr">${v.tipo}</span></td>
       <td style="color:var(--tx2)">${v.pago}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-secondary btn-xs" onclick="verVenta(${v.id})">👁 Ver</button>
-        <button class="btn btn-primary btn-xs" onclick="imprimirVentaId(${v.id})">🖨</button>
-        <button class="btn btn-secondary btn-xs" onclick="crearPedidoDesdeVenta(${v.id})" title="Crear pedido de preparación" style="background:var(--nrbg);color:var(--nrtx);border-color:var(--nr)">🔧 Pedido</button>
-        ${v.estado==='Pendiente'?`<button class="btn btn-success btn-xs" onclick="pagarVenta(${v.id})">✓ Pagar</button>`:''}
-        ${v.estado!=='Anulada'?`<button class="btn btn-danger btn-xs" onclick="anularVenta(${v.id})">✕</button>`:''}
+        <button class="btn btn-secondary btn-xs" onclick="verVenta('${v.id}')">👁 Ver</button>
+        <button class="btn btn-primary btn-xs" onclick=\"imprimirVentaId('\${v.id}')\">🖨</button>
+        <button class="btn btn-secondary btn-xs" onclick=\"crearPedidoDesdeVenta('\${v.id}')\" title="Crear pedido de preparación" style="background:var(--nrbg);color:var(--nrtx);border-color:var(--nr)">🔧 Pedido</button>
+        ${v.estado==='Pendiente'?`<button class="btn btn-success btn-xs" onclick="pagarVenta('${v.id}')">✓ Pagar</button>`:''}
+        ${v.estado!=='Anulada'?`<button class="btn btn-danger btn-xs" onclick="anularVenta('${v.id}')">✕</button>`:''}
       </td>
     </tr>`;
   }).join('');
@@ -1989,10 +1990,10 @@ function renderCotizaciones(){
       <td style="font-weight:700">${fmt(c.total)}</td>
       <td><span class="badge ${ec}">${c.estado}</span></td>
       <td style="white-space:nowrap">
-        ${c.estado==='Pendiente'?`<button class="btn btn-success btn-xs" onclick="aprobarCot(${c.id})">✓</button> `:''}
-        ${c.estado==='Aprobada'?`<button class="btn btn-primary btn-xs" onclick="cotToVenta(${c.id})">→ Venta</button> `:''}
-        ${c.estado==='Pendiente'?`<button class="btn btn-danger btn-xs" onclick="rechazarCot(${c.id})">✕</button> `:''}
-        <button class="btn btn-secondary btn-xs" onclick="delCot(${c.id})">🗑</button>
+        ${c.estado==='Pendiente'?`<button class="btn btn-success btn-xs" onclick="aprobarCot('${c.id}')">✓</button> `:''}
+        ${c.estado==='Aprobada'?`<button class="btn btn-primary btn-xs" onclick=\"cotToVenta('\${c.id}')\">→ Venta</button> `:''}
+        ${c.estado==='Pendiente'?`<button class="btn btn-danger btn-xs" onclick="rechazarCot('${c.id}')">✕</button> `:''}
+        <button class="btn btn-secondary btn-xs" onclick=\"delCot('\${c.id}')\">🗑</button>
       </td>
     </tr>`;
   }).join('');
@@ -2532,9 +2533,9 @@ function renderPedidos(){
         <select class="estado-select" onchange="cambiarEstadoRapido(${p.id},this.value)">
           ${['Pendiente','En preparación','Listo para entrega','Entregado','Cancelado'].map(e=>`<option${p.estado===e?' selected':''}>${e}</option>`).join('')}
         </select>
-        <button class="btn btn-primary btn-xs" onclick="abrirPedido(${p.id})">✏️ Gestionar</button>
-        <button class="btn btn-secondary btn-xs" onclick="imprimirPedidoId(${p.id})">🖨 Imprimir</button>
-        <button class="btn btn-danger btn-xs" onclick="eliminarPedido(${p.id})">🗑</button>
+        <button class="btn btn-primary btn-xs" onclick=\"abrirPedido('\${p.id}')\">✏️ Gestionar</button>
+        <button class="btn btn-secondary btn-xs" onclick=\"imprimirPedidoId('\${p.id}')\">🖨 Imprimir</button>
+        <button class="btn btn-danger btn-xs" onclick="eliminarPedido('${p.id}')">🗑</button>
       </div>
     </div>`;
   }).join('');
@@ -2602,7 +2603,7 @@ async function toggleItemReunido(pedidoId,itemIdx,checked){
 }
 
 async function actualizarEstadoPedido(){
-  const id=parseInt(document.getElementById('ped-id').value); if(!id) return;
+  const id=document.getElementById('ped-id').value; if(!id) return;
   const p=MEM.pedidos.find(x=>x.id===id); if(!p) return;
   p.estado=document.getElementById('ped-estado').value;
   await dbPut('pedidos',p);
@@ -2615,7 +2616,7 @@ async function actualizarEstadoPedido(){
 }
 
 async function guardarCamposPedido(){
-  const id=parseInt(document.getElementById('ped-id').value); if(!id) return;
+  const id=document.getElementById('ped-id').value; if(!id) return;
   const p=MEM.pedidos.find(x=>x.id===id); if(!p) return;
   p.fechaEntrega=document.getElementById('ped-fecha-entrega').value;
   p.notas=document.getElementById('ped-notas').value;
@@ -2625,7 +2626,7 @@ async function guardarCamposPedido(){
 }
 
 function imprimirPedido(){
-  const id=parseInt(document.getElementById('ped-id').value);
+  const id=document.getElementById('ped-id').value;
   if(id) imprimirPedidoId(id);
 }
 
@@ -2937,8 +2938,8 @@ function renderCompras(){
     <td><span class="badge bvd" style="margin-right:4px">${c.actualizados} actualizados</span><span class="badge baz">${c.nuevos} nuevos</span></td>
     <td style="font-weight:700">${fmt(c.total)}</td>
     <td><span class="badge bvd">Ingresada</span></td>
-    <td><button class="btn btn-secondary btn-xs" onclick="verCompra(${c.id})">👁 Ver</button>
-        <button class="btn btn-danger btn-xs" onclick="delCompra(${c.id})">🗑</button></td>
+    <td><button class="btn btn-secondary btn-xs" onclick=\"verCompra('\${c.id}')\">👁 Ver</button>
+        <button class="btn btn-danger btn-xs" onclick=\"delCompra('\${c.id}')\">🗑</button></td>
   </tr>`).join('');
   updateComprasBadge();
 }
@@ -3197,6 +3198,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 </script>
