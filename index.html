@@ -1142,6 +1142,9 @@ async function initDB(){
   if(typeof firebase === 'undefined') throw new Error('Firebase SDK no cargó. Verifica tu conexión.');
   if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   DB = firebase.firestore();
+  // Disable offline persistence to prevent duplicate writes on reconnect
+  DB.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
+  try { await DB.clearPersistence(); } catch(e) { /* ok */ }
 }
 
 // ── Colecciones por sucursal ──────────────────────────────
@@ -1164,6 +1167,12 @@ async function dbAdd(store, data){
   const shared = ['config','proveedores','pedidos'];
   if(!shared.includes(store)){ d.sucursal = SUC || 's1'; d.ts = Date.now(); }
   else { d.ts = Date.now(); }
+  // For inventory: use SKU as document ID to prevent duplicates
+  if(store==='inventario' && d.sku){
+    const docId = d.sku.replace(/[^a-zA-Z0-9-_]/g,'_');
+    await DB.collection(colName(store)).doc(docId).set(d, {merge:false});
+    return docId;
+  }
   const ref = await DB.collection(colName(store)).add(d);
   return ref.id;
 }
@@ -1194,7 +1203,7 @@ async function dbSetConfig(k, v){
 async function dbBatchAdd(store, items, onProgress){
   const col = DB.collection(colName(store));
   const shared = ['config','proveedores','pedidos'];
-  const CHUNK = 499; // Firestore max batch = 500
+  const CHUNK = 499;
   let total = 0;
   for(let i = 0; i < items.length; i += CHUNK){
     const batch = DB.batch();
@@ -1203,7 +1212,9 @@ async function dbBatchAdd(store, items, onProgress){
       const d = {...item};
       delete d.id;
       if(!shared.includes(store)){ d.sucursal = SUC || 's1'; d.ts = Date.now(); }
-      batch.set(col.doc(), d);
+      // Use SKU as document ID to prevent duplicates automatically
+      const docId = store==='inventario' && d.sku ? d.sku.replace(/[^a-zA-Z0-9-_]/g,'_') : col.doc().id;
+      batch.set(col.doc(docId), d);
     }
     await batch.commit();
     total += chunk.length;
@@ -3720,15 +3731,13 @@ async function renderAlertas(){
   if(!cont) return;
   cont.innerHTML = '<div style="padding:20px;color:var(--tx3)">⚡ Analizando sistema...</div>';
 
-  const [is1,is2,ib,cs1,cs2,ped,cot1,cot2] = await Promise.all([
+  const [is1,is2,ib,cs1,cs2,ped] = await Promise.all([
     fbGetCollection('inventario_s1'),
     fbGetCollection('inventario_s2'),
     fbGetCollection('inventario_bodega'),
     fbGetCollection('cotizaciones_s1'),
     fbGetCollection('cotizaciones_s2'),
     fbGetCollection('pedidos'),
-    fbGetCollection('cotizaciones_s1'),
-    fbGetCollection('cotizaciones_s2'),
   ]);
 
   const alertas = [];
@@ -3983,12 +3992,11 @@ async function limpiarTodo(){
   toast('Eliminando todo el sistema...','azul');
   try{
     const cols=[
-      // Correct collections
       'inventario_s1','clientes_s1','ventas_s1','cotizaciones_s1','caja_mov_s1','historial_s1','compras_s1',
       'inventario_s2','clientes_s2','ventas_s2','cotizaciones_s2','caja_mov_s2','historial_s2','compras_s2',
       'inventario_bodega','historial_bodega','compras_bodega',
       'pedidos','proveedores','config',
-      // Legacy/corrupt collections (empty SUC)
+      'alertas','alertas_s1','alertas_s2',
       'inventario_cat','inventario_','clientes_','ventas_','cotizaciones_',
       'caja_mov_','historial_','compras_','clientes_bodega','ventas_bodega',
       'cotizaciones_bodega','caja_mov_bodega','inventario_admin','clientes_admin'
