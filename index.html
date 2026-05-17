@@ -1075,19 +1075,28 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 
 
+
 // ════════════════════════════════════════════════════════════════
 //  FIRESTORE REST API — sin SDK, funciona en cualquier browser
 // ════════════════════════════════════════════════════════════════
 const FB_PROJECT = 'electricidad-palavecino';
 const FB_BASE    = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents';
 
-async function fbRequest(method, path, body){
+async function fbRequest(method, path, body, _retry=0){
   const url = FB_BASE + path;
   const opts = {method, headers:{'Content-Type':'application/json'}};
   if(body) opts.body = JSON.stringify(body);
   const resp = await fetch(url, opts);
   if(resp.status===204) return null;
   if(resp.status===404) return null;
+  if(resp.status===429 || resp.status===503){
+    // Rate limited — wait and retry up to 5 times
+    if(_retry < 5){
+      const wait = Math.pow(2,_retry) * 500; // 500ms, 1s, 2s, 4s, 8s
+      await new Promise(r=>setTimeout(r,wait));
+      return fbRequest(method, path, body, _retry+1);
+    }
+  }
   const json = await resp.json();
   if(!resp.ok) throw new Error(json.error?.message || resp.statusText);
   return json;
@@ -1217,7 +1226,9 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 </script>T<script>
+
 
 
 
@@ -2466,6 +2477,10 @@ async function confirmarImport(){
       console.warn('Import error row',i,err.message);
     }
 
+    // Delay every 10 items to avoid rate limiting (429)
+    if(i % 10 === 0){
+      await new Promise(r=>setTimeout(r,200));
+    }
     // Update progress every BATCH items
     if(i % BATCH === 0 && preview){
       const pct = Math.round((i+1)/total*100);
@@ -3761,6 +3776,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
