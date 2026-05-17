@@ -1152,6 +1152,18 @@ async function setStockSucursal(sku,stock,min){
   await fbRequest('PATCH','/stock_'+SUC+'/'+sku,{fields:toFS({stock,min})});
 }
 
+async function fbGetCollection(colPath){
+  try{
+    const d = await fbRequest('GET','/'+colPath);
+    return d?.documents ? d.documents.map(fromFS).filter(Boolean) : [];
+  }catch(e){ return []; }
+}
+
+async function fbDeleteCollection(colPath){
+  const docs = await fbGetCollection(colPath);
+  for(const d of docs) await fbRequest('DELETE','/'+colPath+'/'+d.id).catch(()=>{});
+}
+
 </script>
 <script>
 
