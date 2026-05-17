@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Electricidad Palavecino — Sistema de Gestión</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 /* ── TEMA OSCURO (default) ── */
@@ -298,8 +301,10 @@ tr:hover td{background:rgba(245,196,0,.04)}
 #sel-screen { display: flex !important; }
 #sel-screen.hidden { display: none !important; }
 </style>
+
 </head>
 <body>
+
 
 
 
@@ -1068,13 +1073,30 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 </script>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<script>
+T).classList.remove('hidden');
+});
 
+
+
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+<script>
 // ════════════════════════════════════════════════════════════════
-//  FIREBASE SDK (compat) — carga desde CDN oficial
+//  FIREBASE LAYER — SDK compat v9.23.0
+//  Todas las funciones son async y usan await correctamente
 // ════════════════════════════════════════════════════════════════
+
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD0xWjASc7hfOQ2CLaW2Qze3v2p7cd8MTc",
   authDomain: "electricidad-palavecino.firebaseapp.com",
@@ -1086,50 +1108,48 @@ const FIREBASE_CONFIG = {
 
 let DB = null;
 
+// Esperar que el SDK cargue desde CDN
 async function initDB(){
-  // Wait for Firebase SDK to load from CDN
   let tries = 0;
   while(typeof firebase === 'undefined' && tries < 100){
-    await new Promise(r=>setTimeout(r,100));
+    await new Promise(r => setTimeout(r, 100));
     tries++;
   }
-  if(typeof firebase === 'undefined') throw new Error('Firebase SDK no cargó');
+  if(typeof firebase === 'undefined') throw new Error('Firebase SDK no cargó. Verifica tu conexión.');
   if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   DB = firebase.firestore();
-  // Use long polling for better compatibility
-  // Settings applied automatically
 }
 
+// ── Colecciones por sucursal ──────────────────────────────
+// Compartidas: config, proveedores, pedidos
+// Por sucursal: todo lo demás + nombre de sucursal (s1, s2, bodega)
 function colName(store){
-  if(store==='config')      return 'config';
-  if(store==='proveedores') return 'proveedores';
-  if(store==='pedidos')     return 'pedidos';
-  const suc = SUC || 's1';
-  return store+'_'+suc;
+  if(['config','proveedores','pedidos'].includes(store)) return store;
+  return store + '_' + (SUC || 's1');
 }
 
+// ── CRUD básico ───────────────────────────────────────────
 async function dbGetAll(store){
-  try{
-    const snap = await DB.collection(colName(store)).get();
-    return snap.docs.map(d=>({...d.data(), id:d.id}));
-  }catch(e){ console.warn('dbGetAll',store,e.message); return []; }
+  const snap = await DB.collection(colName(store)).get();
+  return snap.docs.map(d => ({...d.data(), id: d.id}));
 }
 
 async function dbAdd(store, data){
-  const d = {...data}; delete d.id;
-  const SHARED = ['proveedores','config','pedidos'];
-  if(!SHARED.includes(store)){
-    if(!SUC){ console.error('dbAdd sin SUC'); return null; }
-    d.sucursal = SUC; d.ts = Date.now();
-  } else { d.ts = Date.now(); }
+  const d = {...data};
+  delete d.id;
+  const shared = ['config','proveedores','pedidos'];
+  if(!shared.includes(store)){ d.sucursal = SUC || 's1'; d.ts = Date.now(); }
+  else { d.ts = Date.now(); }
   const ref = await DB.collection(colName(store)).add(d);
   return ref.id;
 }
 
 async function dbPut(store, data){
-  const d = {...data}; const id = d.id; delete d.id;
+  const d = {...data};
+  const id = d.id;
+  delete d.id;
   if(!id) return dbAdd(store, data);
-  await DB.collection(colName(store)).doc(String(id)).set(d, {merge:true});
+  await DB.collection(colName(store)).doc(String(id)).set(d, {merge: true});
   return id;
 }
 
@@ -1138,73 +1158,62 @@ async function dbDelete(store, id){
 }
 
 async function dbGetConfig(k){
-  try{
-    const doc = await DB.collection('config').doc(k).get();
-    return doc.exists ? doc.data().value : null;
-  }catch(e){ return null; }
+  const doc = await DB.collection('config').doc(k).get();
+  return doc.exists ? doc.data().value : null;
 }
 
 async function dbSetConfig(k, v){
-  await DB.collection('config').doc(k).set({value:v});
+  await DB.collection('config').doc(k).set({value: v});
 }
 
-async function getStockSucursal(sku){
-  try{
-    const doc = await DB.collection('stock_'+(SUC||'s1')).doc(sku).get();
-    return doc.exists ? doc.data() : {stock:0, min:1};
-  }catch(e){ return {stock:0, min:1}; }
+// ── Importación masiva con batch ──────────────────────────
+async function dbBatchAdd(store, items, onProgress){
+  const col = DB.collection(colName(store));
+  const shared = ['config','proveedores','pedidos'];
+  const CHUNK = 499; // Firestore max batch = 500
+  let total = 0;
+  for(let i = 0; i < items.length; i += CHUNK){
+    const batch = DB.batch();
+    const chunk = items.slice(i, i + CHUNK);
+    for(const item of chunk){
+      const d = {...item};
+      delete d.id;
+      if(!shared.includes(store)){ d.sucursal = SUC || 's1'; d.ts = Date.now(); }
+      batch.set(col.doc(), d);
+    }
+    await batch.commit();
+    total += chunk.length;
+    if(onProgress) onProgress(total, items.length);
+  }
+  return total;
 }
 
-async function setStockSucursal(sku, stock, min){
-  await DB.collection('stock_'+(SUC||'s1')).doc(sku).set({stock, min}, {merge:true});
-}
-
+// ── Colecciones externas (para admin/bodega) ──────────────
 async function fbGetCollection(colPath){
-  try{
-    const snap = await DB.collection(colPath).get();
-    return snap.docs.map(d=>({...d.data(), id:d.id}));
-  }catch(e){ return []; }
+  const snap = await DB.collection(colPath).get();
+  return snap.docs.map(d => ({...d.data(), id: d.id}));
 }
 
 async function fbDeleteCollection(colPath){
   const snap = await DB.collection(colPath).get();
+  if(snap.empty) return;
   const batch = DB.batch();
   snap.docs.forEach(d => batch.delete(d.ref));
   await batch.commit();
 }
 
-async function dbGetAllRaw(colPath){
-  try{
-    const snap = await DB.collection(colPath).get();
-    return snap.docs.map(d=>({id:d.id}));
-  }catch(e){ return []; }
+// ── Stock por sucursal ────────────────────────────────────
+async function getStockSucursal(sku){
+  const doc = await DB.collection('stock_' + (SUC||'s1')).doc(sku).get();
+  return doc.exists ? doc.data() : {stock:0, min:1};
+}
+async function setStockSucursal(sku, stock, min){
+  await DB.collection('stock_' + (SUC||'s1')).doc(sku).set({stock, min}, {merge:true});
 }
 
-// Batch write for bulk imports — much faster than individual writes
-async function dbBatchAdd(store, dataArray){
-  const col = colName(store);
-  const SHARED = ['proveedores','config','pedidos'];
-  const BATCH_SIZE = 500; // Firestore max batch size
-  let total = 0;
-  for(let i=0; i<dataArray.length; i+=BATCH_SIZE){
-    const chunk = dataArray.slice(i, i+BATCH_SIZE);
-    const batch = DB.batch();
-    for(const data of chunk){
-      const d = {...data}; delete d.id;
-      if(!SHARED.includes(store)){ d.sucursal=SUC; d.ts=Date.now(); }
-      else { d.ts=Date.now(); }
-      batch.set(DB.collection(col).doc(), d);
-    }
-    await batch.commit();
-    total += chunk.length;
-  }
-  return total;
-}
+</script>
+<script>
 
-// fbRequest stub for compatibility (not used with SDK)
-async function fbRequest(method, path, body){ return null; }
-
-</script>T<script>
 
 
 
@@ -1245,7 +1254,6 @@ const SUC_PINS = {
 
 let fbApp;
 
-// initDB — REST API (definida en la capa REST arriba)
 
 // ── COLECCIONES POR SUCURSAL ──────────────────────────────
 // Compartidas: inventario_cat, proveedores, config
@@ -1374,7 +1382,7 @@ function filterStockEst(val){
 // ================================================================
 //  TEMA CLARO / OSCURO
 // ================================================================
-function toggleTheme(){
+async function toggleTheme(){
   const html=document.documentElement;
   const isDark=html.getAttribute('data-theme')==='dark';
   html.setAttribute('data-theme',isDark?'light':'dark');
@@ -1389,7 +1397,7 @@ function toggleTheme(){
 let selPinTarget = '';
 let selPinBuffer = '';
 
-function pedirPinSucursal(suc){
+async function pedirPinSucursal(suc){
   selPinTarget = suc;
   selPinBuffer = '';
   updateSelPinDots();
@@ -1401,7 +1409,7 @@ function pedirPinSucursal(suc){
   wrap.style.display = 'flex';
 }
 
-function seleccionarSucursal(suc){
+async function seleccionarSucursal(suc){
   SUC=suc; sessionStorage.setItem('ep_sucursal',suc);
   const sb=document.getElementById('suc-badge');
   if(sb){
@@ -1439,7 +1447,7 @@ function seleccionarSucursal(suc){
   continuarInit();
 }
 
-function selPinKey(k){
+async function selPinKey(k){
   const err = document.getElementById('sel-pin-error');
   err.textContent = '';
   if(k==='clr'){ selPinBuffer=''; updateSelPinDots(); return; }
@@ -1460,7 +1468,7 @@ function selPinKey(k){
     },180);
   }
 }
-function updateSelPinDots(){
+async function updateSelPinDots(){
   for(let i=0;i<4;i++){
     const d=document.getElementById('spd'+i);
     if(d) d.className='pin-dot'+(i<selPinBuffer.length?' filled':'');
@@ -1475,7 +1483,7 @@ let   rolActual      = 'vendedor'; // rol por defecto al abrir
 let   cfgPinBuffer   = '';
 let   cfgNavEl       = null; // nav element que disparó el acceso
 
-function pedirAccesoConfig(el){
+async function pedirAccesoConfig(el){
   cfgNavEl = el;
   cfgPinBuffer = '';
   updateCfgDots();
@@ -1483,7 +1491,7 @@ function pedirAccesoConfig(el){
   document.getElementById('modal-acceso-config').classList.add('open');
 }
 
-function pedirAccesoHistorial(el){
+async function pedirAccesoHistorial(el){
   // Historial también es solo admin
   cfgNavEl = el;
   cfgPinBuffer = '';
@@ -1492,7 +1500,7 @@ function pedirAccesoHistorial(el){
   document.getElementById('modal-acceso-config').classList.add('open');
 }
 
-function cfgPinKey(k){
+async function cfgPinKey(k){
   const err = document.getElementById('cfg-pin-error');
   err.textContent = '';
   if(k === 'clr'){ cfgPinBuffer = ''; updateCfgDots(); return; }
@@ -1519,14 +1527,14 @@ function cfgPinKey(k){
   }
 }
 
-function updateCfgDots(){
+async function updateCfgDots(){
   for(let i=0;i<4;i++){
     const d = document.getElementById('cpd'+i);
     if(d) d.className = 'pin-dot' + (i < cfgPinBuffer.length ? ' filled' : '');
   }
 }
 
-function actualizarRolBadge(){
+async function actualizarRolBadge(){
   const b = document.getElementById('role-badge');
   if(!b) return;
   if(rolActual === 'admin'){
@@ -1543,8 +1551,8 @@ function actualizarRolBadge(){
 }
 
 // Mantener funciones por compatibilidad (la configuración de PIN ahora es solo en código)
-function updatePinDots(){}
-function pinKey(k){}
+async function updatePinDots(){}
+async function pinKey(k){}
 
 async function cambiarPIN(){
   toast('Las contraseñas se gestionan directamente en el código del sistema','azul');
@@ -1651,7 +1659,7 @@ async function delProv(id){
 // ================================================================
 //  INVENTARIO
 // ================================================================
-function calcMargen(){
+async function calcMargen(){
   const c=parseFloat(document.getElementById('prod-costo').value)||0;
   const v=parseFloat(document.getElementById('prod-venta').value)||0;
   const m=c>0&&v>c?Math.round((v-c)/v*100):0;
@@ -1659,7 +1667,7 @@ function calcMargen(){
   el.value=m+'%';
   el.style.color=m>30?'var(--vdtx)':m>10?'var(--nrtx)':'var(--rjtx)';
 }
-function openModalProducto(id=null){
+async function openModalProducto(id=null){
   document.getElementById('tit-prod').textContent=id?'Editar Producto':'Nuevo Producto';
   document.getElementById('prod-id').value=id||'';
   const p=id?MEM.inventario.find(x=>x.id===id):null;
@@ -1688,8 +1696,8 @@ async function guardarProducto(){
   closeModal('modal-producto'); renderInventario(); updateDash();
   toast(id?'Producto actualizado ✅':'Producto registrado ✅');
 }
-function siInfo(s,m){ const r=s/m; if(r>=2)return{cls:'bvd',txt:'Normal',bc:'fok'}; if(r>=1)return{cls:'bam',txt:'Bajo',bc:'fwn'}; return{cls:'brj',txt:'Crítico',bc:'flo'}; }
-function renderInventario(){
+async function siInfo(s,m){ const r=s/m; if(r>=2)return{cls:'bvd',txt:'Normal',bc:'fok'}; if(r>=1)return{cls:'bam',txt:'Bajo',bc:'fwn'}; return{cls:'brj',txt:'Crítico',bc:'flo'}; }
+async function renderInventario(){
   const inv = MEM.inventario;
   if(!inv.length){
     document.getElementById('tbl-inventario').innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--tx3)">Sin productos. Usa <strong>Importar Excel</strong> o <strong>+ Nuevo Producto</strong>.</td></tr>';
@@ -1748,7 +1756,7 @@ async function descontarStock(items){
 // ================================================================
 //  FAVORITOS (top 8 más vendidos)
 // ================================================================
-function renderFavs(){
+async function renderFavs(){
   const top=[...MEM.inventario].sort((a,b)=>(b.ventas_count||0)-(a.ventas_count||0)).slice(0,8);
   const grid=document.getElementById('favs-grid');
   if(!top.length){ grid.style.display='none'; return; }
@@ -1759,7 +1767,7 @@ function renderFavs(){
       <span class="fav-price">${fmt(p.venta)} · Stock: ${p.stock}</span>
     </button>`).join('');
 }
-function addFavToVenta(nombre,precio){
+async function addFavToVenta(nombre,precio){
   const exists=VI.find(it=>it.nombre===nombre);
   if(exists){ exists.qty++; renderVI(); toast('Cantidad aumentada ✅'); }
   else { VI.push({nombre,qty:1,precio}); renderVI(); }
@@ -1769,11 +1777,11 @@ function addFavToVenta(nombre,precio){
 //  VENTAS — items con dropdown de búsqueda
 // ================================================================
 let VI=[], CI=[], activeDropdown=-1;
-function initVI(){ VI=[{nombre:'',qty:1,precio:0}]; renderVI(); }
-function addVentaItem(){ VI.push({nombre:'',qty:1,precio:0}); renderVI(); }
-function removeVI(i){ if(VI.length>1){ VI.splice(i,1); renderVI(); } }
+async function initVI(){ VI=[{nombre:'',qty:1,precio:0}]; renderVI(); }
+async function addVentaItem(){ VI.push({nombre:'',qty:1,precio:0}); renderVI(); }
+async function removeVI(i){ if(VI.length>1){ VI.splice(i,1); renderVI(); } }
 
-function renderVI(){
+async function renderVI(){
   document.getElementById('venta-items-wrap').innerHTML=VI.map((it,i)=>`
     <div class="irow">
       <div class="prod-suggest">
@@ -1794,7 +1802,7 @@ function renderVI(){
   calcVT();
 }
 
-function showDropdown(i,val){
+async function showDropdown(i,val){
   const dd=document.getElementById('drop-'+i); if(!dd) return;
   const matches=MEM.inventario.filter(p=>p.nombre.toLowerCase().includes((val||'').toLowerCase())||p.sku.toLowerCase().includes((val||'').toLowerCase())).slice(0,8);
   if(!matches.length||(!val&&matches.length===0)){ dd.classList.remove('open'); return; }
@@ -1811,8 +1819,8 @@ function showDropdown(i,val){
   }).join('');
   dd.classList.add('open');
 }
-function hideDropdown(i){ const dd=document.getElementById('drop-'+i); if(dd) dd.classList.remove('open'); }
-function selectProd(i,nombre,precio){
+async function hideDropdown(i){ const dd=document.getElementById('drop-'+i); if(dd) dd.classList.remove('open'); }
+async function selectProd(i,nombre,precio){
   VI[i].nombre=nombre; VI[i].precio=precio;
   renderVI();
   // re-focus next qty input
@@ -1852,7 +1860,7 @@ async function registrarVenta(){
   toast(`Venta ${folio} registrada — ${fmt(total)} ✅`);
 }
 
-function renderVentas(){
+async function renderVentas(){
   document.getElementById('tbl-ventas').innerHTML=MEM.ventas.map(v=>{
     const ec=v.estado==='Pagada'?'bvd':v.estado==='Pendiente'?'bam':'brj';
     return`<tr>
@@ -1873,7 +1881,7 @@ function renderVentas(){
   }).join('');
 }
 
-function verVenta(id){
+async function verVenta(id){
   const v=MEM.ventas.find(x=>x.id===id); if(!v) return;
   const items=v.items&&v.items.length?`<table style="width:100%;margin:10px 0;font-size:12.5px"><thead><tr><th>Producto</th><th>Cant.</th><th>P.Unit</th><th>Total</th></tr></thead><tbody>${v.items.map(it=>`<tr><td>${it.nombre}</td><td>${it.qty}</td><td>${fmt(it.precio)}</td><td>${fmt(it.qty*it.precio)}</td></tr>`).join('')}</tbody></table>`:'';
   document.getElementById('ver-venta-body').innerHTML=`
@@ -1892,12 +1900,12 @@ function verVenta(id){
   document.getElementById('modal-ver-venta').classList.add('open');
 }
 
-function imprimirVentaActual(){
+async function imprimirVentaActual(){
   const id=document.getElementById('modal-ver-venta')._id;
   if(id) imprimirVentaId(id);
 }
 
-function imprimirVentaId(id){
+async function imprimirVentaId(id){
   const v=MEM.ventas.find(x=>x.id===id); if(!v) return;
   closeModal('modal-ver-venta');
   const cfg=CFG;
@@ -1942,10 +1950,10 @@ async function anularVenta(id){
 // ================================================================
 //  COTIZACIONES
 // ================================================================
-function initCI(){ CI=[{nombre:'',qty:1,precio:0}]; renderCI(); }
-function addCotItem(){ CI.push({nombre:'',qty:1,precio:0}); renderCI(); }
-function removeCI(i){ if(CI.length>1){ CI.splice(i,1); renderCI(); } }
-function renderCI(){
+async function initCI(){ CI=[{nombre:'',qty:1,precio:0}]; renderCI(); }
+async function addCotItem(){ CI.push({nombre:'',qty:1,precio:0}); renderCI(); }
+async function removeCI(i){ if(CI.length>1){ CI.splice(i,1); renderCI(); } }
+async function renderCI(){
   document.getElementById('cot-items-wrap').innerHTML=CI.map((it,i)=>`
     <div class="irow">
       <input list="pdl-cot" placeholder="Ítem..." value="${it.nombre}" oninput="CI[${i}].nombre=this.value;autoFPC(${i},this.value)">
@@ -1981,7 +1989,7 @@ async function guardarCotizacion(){
   closeModal('modal-cotizacion'); renderCotizaciones();
   toast(`Cotización ${num} guardada ✅`);
 }
-function renderCotizaciones(){
+async function renderCotizaciones(){
   document.getElementById('tbl-cotizaciones').innerHTML=MEM.cotizaciones.map(c=>{
     const ec=c.estado==='Aprobada'?'bvd':c.estado==='Pendiente'?'bam':'brj';
     const venc=new Date(c.validaHasta)<new Date()&&c.estado==='Pendiente';
@@ -2040,7 +2048,7 @@ async function delCot(id){
 // ================================================================
 //  CAJA
 // ================================================================
-function renderCaja(){
+async function renderCaja(){
   const movs=MEM.movimientos.filter(m=>m.fecha===today());
   const ing=movs.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.monto,0);
   const egr=movs.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.monto,0);
@@ -2089,7 +2097,7 @@ async function cerrarCaja(){
   await logAction('Caja','Cierre','Saldo transferido: '+fmt(CFG.apertura));
   renderCaja(); toast('Caja cerrada. Saldo al día siguiente: '+fmt(CFG.apertura)+' ✅');
 }
-function switchTab(mod,tab,btn){
+async function switchTab(mod,tab,btn){
   ['resumen','movimientos','cierre'].forEach(t=>document.getElementById(`tab-${mod}-${t}`).classList.remove('active'));
   document.querySelectorAll(`#page-${mod} .tabbtn`).forEach(b=>b.classList.remove('active'));
   document.getElementById(`tab-${mod}-${tab}`).classList.add('active');
@@ -2100,7 +2108,7 @@ function switchTab(mod,tab,btn){
 // ================================================================
 //  CIERRE DEL DÍA (reporte imprimible)
 // ================================================================
-function generarCierreDia(){
+async function generarCierreDia(){
   const movs=MEM.movimientos.filter(m=>m.fecha===today());
   const ing=movs.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.monto,0);
   const egr=movs.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.monto,0);
@@ -2130,12 +2138,12 @@ function generarCierreDia(){
       </table>
     </div>`;
 }
-function imprimirCierre(){ window.print(); }
+async function imprimirCierre(){ window.print(); }
 
 // ================================================================
 //  ORDEN DE COMPRA
 // ================================================================
-function generarOrdenCompra(){
+async function generarOrdenCompra(){
   const bajos=MEM.inventario.filter(p=>p.stock<p.min);
   if(!bajos.length){ document.getElementById('orden-compra-body').innerHTML='<div class="al al-ok">✅ No hay productos bajo el stock mínimo.</div>'; return; }
   const porProveedor={};
@@ -2158,8 +2166,8 @@ function generarOrdenCompra(){
   });
   document.getElementById('orden-compra-body').innerHTML=`<div class="al al-wn" style="margin-bottom:14px">⚠️ ${bajos.length} producto(s) bajo el stock mínimo</div>${html}`;
 }
-function imprimirOrden(){ window.print(); }
-function exportarOrdenCSV(){
+async function imprimirOrden(){ window.print(); }
+async function exportarOrdenCSV(){
   const bajos=MEM.inventario.filter(p=>p.stock<p.min);
   const h='SKU,Producto,Proveedor,Stock Actual,Mínimo,Sugerido Pedir,Unidad';
   const rows=bajos.map(p=>[p.sku,p.nombre,p.prov,p.stock,p.min,Math.max(p.min*2-p.stock,p.min),p.und]);
@@ -2173,8 +2181,8 @@ function exportarOrdenCSV(){
 // ================================================================
 //  DASHBOARD
 // ================================================================
-function renderDash(){ updateDash(); }
-function updateDash(){
+async function renderDash(){ updateDash(); }
+async function updateDash(){
   if(SUC==='admin') checkAlertasBadge().catch(()=>{});
   const hoy=today();
   const vHoy=MEM.ventas.filter(v=>v.fecha===hoy&&v.estado!=='Anulada');
@@ -2201,7 +2209,7 @@ function updateDash(){
   document.getElementById('dash-sc').innerHTML=MEM.inventario.filter(p=>p.stock<p.min).slice(0,6).map(p=>`<tr><td>${p.nombre}</td><td style="color:var(--rjtx);font-weight:700">${p.stock}</td><td style="color:var(--tx3)">${p.min}</td></tr>`).join('');
   renderChart(); renderAlertas();
 }
-function renderChart(){
+async function renderChart(){
   const hoy=new Date(); const vals=[]; const labels=[];
   const dnames=['Do','Lu','Ma','Mi','Ju','Vi','Sa'];
   for(let i=6;i>=0;i--){
@@ -2218,7 +2226,7 @@ function renderChart(){
       <span class="blab">${labels[i]}</span>
     </div>`).join('');
 }
-function renderAlertas(){
+async function renderAlertas(){
   const crit=MEM.inventario.filter(p=>p.stock<p.min);
   const pend=MEM.ventas.filter(v=>v.estado==='Pendiente');
   const cotP=MEM.cotizaciones.filter(c=>c.estado==='Pendiente');
@@ -2259,7 +2267,7 @@ async function limpiarHistorial(){
 // ================================================================
 //  BÚSQUEDA GLOBAL
 // ================================================================
-function globalSearch(val){
+async function globalSearch(val){
   const res=document.getElementById('search-results');
   if(!val||val.length<2){ res.style.display='none'; return; }
   const v=val.toLowerCase(); const m=[];
@@ -2345,7 +2353,7 @@ async function restaurarBackup(ev){
 // ================================================================
 const importInfos={clientes:'Columnas: RUT · Nombre · Email · Teléfono · Categoría · Saldo · Dirección',inventario:'Columnas del Excel (en orden):\nSKU · Nombre · Categoría · Unidad · Stock · Mínimo · P.Costo · P.Venta · Proveedor · Descripción\n\nLa columna Margen (K) se ignora al importar.',proveedores:'Columnas: RUT · Empresa · Contacto · Teléfono · Email · Condición Pago · Productos'};
 let curImpMod='', impData=[];
-function importarExcel(mod){
+async function importarExcel(mod){
   curImpMod=mod; impData=[];
   document.getElementById('import-info').textContent=importInfos[mod]||'';
   document.getElementById('import-preview').innerHTML='';
@@ -2355,7 +2363,7 @@ function importarExcel(mod){
   if(hint) hint.style.display = mod==='inventario' ? 'block' : 'none';
   document.getElementById('modal-import').classList.add('open');
 }
-function procesarImport(ev){
+async function procesarImport(ev){
   const file=ev.target.files[0]; if(!file) return;
   const esInventario = curImpMod==='inventario';
   if(file.name.toLowerCase().endsWith('.csv')){
@@ -2493,7 +2501,7 @@ async function confirmarImport(){
   }
   if(btn){ btn.disabled=false; btn.textContent='Confirmar'; }
 }
-function exportarCSV(mod){
+async function exportarCSV(mod){
   let h='',rows=[];
   if(mod==='clientes'){ h='RUT,Nombre,Email,Teléfono,Categoría,Saldo,Dirección'; rows=MEM.clientes.map(c=>[c.rut,c.nombre,c.email,c.tel,c.cat,c.saldo,c.dir]); }
   else if(mod==='inventario'){ h='SKU,Nombre,Categoría,Stock,Mínimo,P.Costo,P.Venta,Proveedor,Unidad'; rows=MEM.inventario.map(p=>[p.sku,p.nombre,p.cat,p.stock,p.min,p.costo,p.venta,p.prov,p.und]); }
@@ -2530,7 +2538,7 @@ async function crearPedidoDesdeVenta(ventaId){
   toast(`Pedido ${numPedido} creado ✅ — Ve a "Pedidos en Preparación"`,'naranja');
 }
 
-function estadoColor(e){
+async function estadoColor(e){
   if(e==='Pendiente') return 'bam';
   if(e==='En preparación') return 'baz';
   if(e==='Listo para entrega') return 'bvd';
@@ -2543,24 +2551,24 @@ function estadoColor(e){
 // ================================================================
 //  MÓDULO PEDIDOS
 // ================================================================
-function estadoColor(est){
+async function estadoColor(est){
   return {'Pendiente':'var(--nrbg)','En preparación':'var(--azbg)','Despachado':'#78350f','Recibido':'var(--vdbg)'}[est]||'var(--bg-card)';
 }
 
-function renderPedidos(){
+async function renderPedidos(){
   const cont=document.getElementById('page-pedidos');
   if(!cont) return;
   if(SUC==='bodega') renderPedidosBodega(cont);
   else renderPedidosSucursal(cont);
 }
 
-function badgePedidos(){
+async function badgePedidos(){
   const pend=MEM.pedidos.filter(p=>p.estado==='Pendiente'||p.estado==='En preparación').length;
   const b=document.getElementById('badge-pedidos');
   if(b){b.textContent=pend||'';b.style.display=pend?'inline':'none';}
 }
 
-function renderPedidosSucursal(cont){
+async function renderPedidosSucursal(cont){
   badgePedidos();
   const kpis=[['Pendiente','⏳','var(--nr)'],['En preparación','🔧','var(--az)'],['Despachado','🚚','var(--am)'],['Recibido','✅','var(--vd)']];
   cont.innerHTML=`
@@ -2592,7 +2600,7 @@ function renderPedidosSucursal(cont){
     </div>`;
 }
 
-function renderPedidosBodega(cont){
+async function renderPedidosBodega(cont){
   badgePedidos();
   const SUC_LABEL={s1:'Casa Matriz',s2:'Los Muermos'};
   const kpis=[['Pendiente','⏳','var(--nr)'],['En preparación','🔧','var(--az)'],['Despachado','🚚','var(--am)'],['Recibido','✅','var(--vd)']];
@@ -2720,7 +2728,7 @@ async function cancelarPedido(id){
   MEM.pedidos=MEM.pedidos.filter(p=>p.id!==id);
   renderPedidos(); toast('Pedido cancelado','rojo');
 }
-function verDetallePedido(id){
+async function verDetallePedido(id){
   const p=MEM.pedidos.find(x=>x.id===id); if(!p)return;
   const SUC_LABEL={s1:'Casa Matriz',s2:'Los Muermos',bodega:'Bodega'};
   const m=document.createElement('div');
@@ -2777,7 +2785,7 @@ async function renderStockSucursales(){
 }
 
 
-function updatePedidosBadge(){
+async function updatePedidosBadge(){
   const activos=MEM.pedidos.filter(p=>p.estado!=='Entregado'&&p.estado!=='Cancelado').length;
   const b=document.getElementById('badge-pedidos');
   if(b){ b.textContent=activos; b.style.display=activos?'inline':'none'; }
@@ -2790,7 +2798,7 @@ function updatePedidosBadge(){
 let compraItems = [];
 let compraRawText = '';
 
-function resetCompraModal(){
+async function resetCompraModal(){
   compraItems = []; compraRawText = '';
   document.getElementById('compra-step1').style.display = 'block';
   document.getElementById('compra-step2').style.display = 'none';
@@ -2925,7 +2933,7 @@ Responde SOLO con el JSON, sin texto adicional ni backticks. Si no puedes leer a
   }
 }
 
-function renderCompraItems(){
+async function renderCompraItems(){
   const cont = document.getElementById('compra-items-lista');
   cont.innerHTML = compraItems.map((it, i) => {
     const tag = it.es_nuevo
@@ -2942,7 +2950,7 @@ function renderCompraItems(){
   }).join('');
 }
 
-function checkItemExiste(i){
+async function checkItemExiste(i){
   const it = compraItems[i];
   const enInv = MEM.inventario.find(p => p.sku?.toLowerCase() === it.codigo?.toLowerCase());
   it.inv_match = enInv || null;
@@ -2950,12 +2958,12 @@ function checkItemExiste(i){
   renderCompraItems();
 }
 
-function addCompraItem(){
+async function addCompraItem(){
   compraItems.push({codigo:'',descripcion:'',cantidad:1,precio_unitario:0,precio_total:0,es_nuevo:true,inv_match:null});
   renderCompraItems();
 }
 
-function calcCompraTotales(neto, iva, total){
+async function calcCompraTotales(neto, iva, total){
   // If called from item edits, recalculate
   if(neto === undefined){
     const subtotal = compraItems.reduce((s,it)=>s+(it.cantidad*it.precio_unitario),0);
@@ -3033,7 +3041,7 @@ async function confirmarCompra(){
   toast(`Factura ingresada ✅ — ${nuevos} productos nuevos, ${actualizados} actualizados en inventario`);
 }
 
-function renderCompras(){
+async function renderCompras(){
   const tb = document.getElementById('tbl-compras');
   if(!MEM.compras.length){
     tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--tx3)">Sin facturas ingresadas aún. Usa "📄 Leer Factura PDF" para comenzar.</td></tr>`;
@@ -3052,7 +3060,7 @@ function renderCompras(){
   updateComprasBadge();
 }
 
-function verCompra(id){
+async function verCompra(id){
   const c = MEM.compras.find(x=>x.id===id); if(!c) return;
   document.getElementById('ver-compra-body').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;font-size:13px">
@@ -3154,7 +3162,7 @@ async function renderConsolidado(){
   }
 }
 
-function renderConsolidadoTable(data){
+async function renderConsolidadoTable(data){
   const tb = document.getElementById('tbl-consolidado');
   if(!data.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx3)">Sin datos</td></tr>'; return; }
   tb.innerHTML = data.map(p=>{
@@ -3174,7 +3182,7 @@ function renderConsolidadoTable(data){
   }).join('');
 }
 
-function filterConsolidado(q){
+async function filterConsolidado(q){
   if(!window._consData) return;
   const f = q.toLowerCase();
   const filtered = window._consData.filter(p=>
@@ -3191,7 +3199,7 @@ function filterConsolidado(q){
 // ================================================================
 const pinVisible = {s1:false, s2:false, bodega:false, admin:false};
 
-function togglePin(suc){
+async function togglePin(suc){
   pinVisible[suc] = !pinVisible[suc];
   const el = document.getElementById('pin-display-'+suc);
   if(el) el.textContent = pinVisible[suc] ? (SUC_PINS[suc]||'----') : '••••';
@@ -3568,13 +3576,13 @@ async function checkAlertasBadge(){
 }
 
 // ── Make ventas/cotizaciones/clientes/inventario READ-ONLY for admin ──
-function isAdminReadOnly(){
+async function isAdminReadOnly(){
   return SUC==='admin';
 }
 
 
 // ── Admin read-only guard ─────────────────────────────────
-function adminGuard(fn){
+async function adminGuard(fn){
   if(SUC==='admin'){ toast('El administrador solo puede visualizar datos','naranja'); return false; }
   return true;
 }
@@ -3766,20 +3774,6 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-</script>).classList.remove('hidden');
-});
 
 
 
