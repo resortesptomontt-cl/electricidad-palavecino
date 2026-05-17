@@ -1068,166 +1068,144 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 </script>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 
-
-
-
-
-
-
 // ════════════════════════════════════════════════════════════════
-//  FIRESTORE REST API — sin SDK, funciona en cualquier browser
+//  FIREBASE SDK (compat) — carga desde CDN oficial
 // ════════════════════════════════════════════════════════════════
-const FB_PROJECT = 'electricidad-palavecino';
-const FB_BASE    = 'https://firestore.googleapis.com/v1/projects/'+FB_PROJECT+'/databases/(default)/documents';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyD0xWjASc7hfOQ2CLaW2Qze3v2p7cd8MTc",
+  authDomain: "electricidad-palavecino.firebaseapp.com",
+  projectId: "electricidad-palavecino",
+  storageBucket: "electricidad-palavecino.firebasestorage.app",
+  messagingSenderId: "780703804280",
+  appId: "1:780703804280:web:8da40d5f0602f5cc96b68d"
+};
 
-async function fbRequest(method, path, body, _retry=0){
-  const url = FB_BASE + path;
-  const opts = {method, headers:{'Content-Type':'application/json'}};
-  if(body) opts.body = JSON.stringify(body);
-  const resp = await fetch(url, opts);
-  if(resp.status===204) return null;
-  if(resp.status===404) return null;
-  if(resp.status===429 || resp.status===503){
-    // Rate limited — wait and retry up to 5 times
-    if(_retry < 5){
-      const wait = Math.pow(2,_retry) * 500; // 500ms, 1s, 2s, 4s, 8s
-      await new Promise(r=>setTimeout(r,wait));
-      return fbRequest(method, path, body, _retry+1);
-    }
-  }
-  const json = await resp.json();
-  if(!resp.ok) throw new Error(json.error?.message || resp.statusText);
-  return json;
-}
+let DB = null;
 
-function toFS(obj){
-  const f={};
-  for(const [k,v] of Object.entries(obj)){
-    if(v===null||v===undefined)    f[k]={nullValue:null};
-    else if(typeof v==='boolean')  f[k]={booleanValue:v};
-    else if(typeof v==='number')   f[k]={doubleValue:v};
-    else if(typeof v==='string')   f[k]={stringValue:v};
-    else if(Array.isArray(v))      f[k]={arrayValue:{values:v.map(toFSVal)}};
-    else if(typeof v==='object')   f[k]={mapValue:{fields:toFS(v)}};
+async function initDB(){
+  // Wait for Firebase SDK to load from CDN
+  let tries = 0;
+  while(typeof firebase === 'undefined' && tries < 100){
+    await new Promise(r=>setTimeout(r,100));
+    tries++;
   }
-  return f;
-}
-function toFSVal(v){
-  if(v===null||v===undefined)    return {nullValue:null};
-  if(typeof v==='boolean')       return {booleanValue:v};
-  if(typeof v==='number')        return {doubleValue:v};
-  if(typeof v==='string')        return {stringValue:v};
-  if(Array.isArray(v))           return {arrayValue:{values:v.map(toFSVal)}};
-  if(typeof v==='object')        return {mapValue:{fields:toFS(v)}};
-  return {stringValue:String(v)};
-}
-function fromFS(doc){
-  if(!doc||!doc.fields) return null;
-  const obj={id:doc.name?.split('/').pop()};
-  for(const [k,v] of Object.entries(doc.fields)) obj[k]=fromFSVal(v);
-  return obj;
-}
-function fromFSVal(v){
-  if('nullValue'    in v) return null;
-  if('booleanValue' in v) return v.booleanValue;
-  if('integerValue' in v) return Number(v.integerValue);
-  if('doubleValue'  in v) return Number(v.doubleValue);
-  if('stringValue'  in v) return v.stringValue;
-  if('arrayValue'   in v) return (v.arrayValue.values||[]).map(fromFSVal);
-  if('mapValue'     in v) return fromFS({fields:v.mapValue.fields||{},name:''});
-  return null;
+  if(typeof firebase === 'undefined') throw new Error('Firebase SDK no cargó');
+  if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  DB = firebase.firestore();
+  // Use long polling for better compatibility
+  DB.settings({experimentalForceLongPolling: true, merge: true});
 }
 
 function colName(store){
   if(store==='config')      return 'config';
   if(store==='proveedores') return 'proveedores';
   if(store==='pedidos')     return 'pedidos';
-  // Safety guard: if SUC is empty, default to s1 to avoid corrupt collection names
   const suc = SUC || 's1';
   return store+'_'+suc;
 }
 
-let fsDB=null;
-
-async function initDB(){
-  // Simple connectivity check — any response (including 404) means Firestore is reachable
-  try{ await fbRequest('GET','/config/ping'); }
-  catch(e){ /* 404 = doc not found = Firestore works fine */ }
-}
-
 async function dbGetAll(store){
   try{
-    const col = colName(store);
-    let all = [];
-    let pageToken = null;
-    // Firestore REST paginates at 300 docs — loop until done
-    do {
-      const url = '/'+col+(pageToken?'?pageToken='+encodeURIComponent(pageToken):'');
-      const d = await fbRequest('GET', url);
-      if(!d) break;
-      if(d.documents) all = all.concat(d.documents.map(fromFS).filter(Boolean));
-      pageToken = d.nextPageToken || null;
-    } while(pageToken);
-    return all;
+    const snap = await DB.collection(colName(store)).get();
+    return snap.docs.map(d=>({...d.data(), id:d.id}));
   }catch(e){ console.warn('dbGetAll',store,e.message); return []; }
 }
-async function dbAdd(store,data){
-  const d={...data}; delete d.id;
-  const SHARED=['proveedores','config','inventario'];
-  if(!SHARED.includes(store)){d.sucursal=SUC;d.ts=Date.now();}
-  const r=await fbRequest('POST','/'+colName(store),{fields:toFS(d)});
-  return r?.name?.split('/').pop()||null;
+
+async function dbAdd(store, data){
+  const d = {...data}; delete d.id;
+  const SHARED = ['proveedores','config','pedidos'];
+  if(!SHARED.includes(store)){
+    if(!SUC){ console.error('dbAdd sin SUC'); return null; }
+    d.sucursal = SUC; d.ts = Date.now();
+  } else { d.ts = Date.now(); }
+  const ref = await DB.collection(colName(store)).add(d);
+  return ref.id;
 }
-async function dbPut(store,data){
-  const d={...data}; const id=d.id; delete d.id;
-  if(!id) return dbAdd(store,data);
-  await fbRequest('PATCH','/'+colName(store)+'/'+id,{fields:toFS(d)});
+
+async function dbPut(store, data){
+  const d = {...data}; const id = d.id; delete d.id;
+  if(!id) return dbAdd(store, data);
+  await DB.collection(colName(store)).doc(String(id)).set(d, {merge:true});
   return id;
 }
-async function dbDelete(store,id){
-  await fbRequest('DELETE','/'+colName(store)+'/'+id);
+
+async function dbDelete(store, id){
+  await DB.collection(colName(store)).doc(String(id)).delete();
 }
+
 async function dbGetConfig(k){
-  try{ const d=await fbRequest('GET','/config/'+k); return d?fromFS(d)?.value??null:null; }
-  catch(e){ return null; }
+  try{
+    const doc = await DB.collection('config').doc(k).get();
+    return doc.exists ? doc.data().value : null;
+  }catch(e){ return null; }
 }
-async function dbSetConfig(k,v){
-  await fbRequest('PATCH','/config/'+k,{fields:toFS({value:v})});
+
+async function dbSetConfig(k, v){
+  await DB.collection('config').doc(k).set({value:v});
 }
+
 async function getStockSucursal(sku){
   try{
-    const d=await fbRequest('GET','/stock_'+SUC+'/'+sku);
-    if(!d||!d.fields) return {stock:0,min:1};
-    return {stock:fromFSVal(d.fields.stock||{doubleValue:0}),min:fromFSVal(d.fields.min||{doubleValue:1})};
-  }catch(e){ return {stock:0,min:1}; }
+    const doc = await DB.collection('stock_'+(SUC||'s1')).doc(sku).get();
+    return doc.exists ? doc.data() : {stock:0, min:1};
+  }catch(e){ return {stock:0, min:1}; }
 }
-async function setStockSucursal(sku,stock,min){
-  await fbRequest('PATCH','/stock_'+SUC+'/'+sku,{fields:toFS({stock,min})});
+
+async function setStockSucursal(sku, stock, min){
+  await DB.collection('stock_'+(SUC||'s1')).doc(sku).set({stock, min}, {merge:true});
 }
 
 async function fbGetCollection(colPath){
   try{
-    const d = await fbRequest('GET','/'+colPath);
-    return d?.documents ? d.documents.map(fromFS).filter(Boolean) : [];
+    const snap = await DB.collection(colPath).get();
+    return snap.docs.map(d=>({...d.data(), id:d.id}));
   }catch(e){ return []; }
 }
 
 async function fbDeleteCollection(colPath){
-  const docs = await fbGetCollection(colPath);
-  for(const d of docs) await fbRequest('DELETE','/'+colPath+'/'+d.id).catch(()=>{});
+  const snap = await DB.collection(colPath).get();
+  const batch = DB.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
 }
 
+async function dbGetAllRaw(colPath){
+  try{
+    const snap = await DB.collection(colPath).get();
+    return snap.docs.map(d=>({id:d.id}));
+  }catch(e){ return []; }
+}
 
+// Batch write for bulk imports — much faster than individual writes
+async function dbBatchAdd(store, dataArray){
+  const col = colName(store);
+  const SHARED = ['proveedores','config','pedidos'];
+  const BATCH_SIZE = 500; // Firestore max batch size
+  let total = 0;
+  for(let i=0; i<dataArray.length; i+=BATCH_SIZE){
+    const chunk = dataArray.slice(i, i+BATCH_SIZE);
+    const batch = DB.batch();
+    for(const data of chunk){
+      const d = {...data}; delete d.id;
+      if(!SHARED.includes(store)){ d.sucursal=SUC; d.ts=Date.now(); }
+      else { d.ts=Date.now(); }
+      batch.set(DB.collection(col).doc(), d);
+    }
+    await batch.commit();
+    total += chunk.length;
+  }
+  return total;
+}
 
-
-
-
-
-
+// fbRequest stub for compatibility (not used with SDK)
+async function fbRequest(method, path, body){ return null; }
 
 </script>T<script>
+
 
 
 
@@ -2425,25 +2403,18 @@ function procesarImport(ev){
 async function confirmarImport(){
   const total = impData.length;
   if(!total){ toast('Sin datos para importar','rojo'); return; }
-
-  // Show progress
   const btn = document.getElementById('btn-ci');
-  if(btn){ btn.disabled=true; btn.textContent='Importando...'; }
   const preview = document.getElementById('import-preview');
+  if(btn){ btn.disabled=true; btn.textContent='Importando...'; }
 
-  let count=0, errors=0;
-  const BATCH = 20; // Process 20 at a time to show progress
-
-  for(let i=0; i<impData.length; i++){
-    const r = impData[i];
-    try{
-      if(curImpMod==='clientes'&&r[1]){
-        await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',
-          cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''});
-        count++;
-      }
-      else if(curImpMod==='inventario'&&r[1]){
-        const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
+  try{
+    if(curImpMod==='inventario'){
+      // Use batch writes for speed
+      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
+      const productos = [];
+      for(let i=0; i<impData.length; i++){
+        const r = impData[i];
+        if(!r[1]) continue;
         const sku    = String(r[0]||'').trim() || 'EP-'+String(i+1).padStart(4,'0');
         const nombre = String(r[1]||'').trim();
         const catRaw = String(r[2]||'').trim();
@@ -2456,59 +2427,68 @@ async function confirmarImport(){
         const prov   = String(r[8]||'').trim();
         const desc   = String(r[9]||'').trim();
         if(!nombre) continue;
-        const existente = MEM.inventario.find(p=>p.sku===sku);
-        if(existente){
-          existente.nombre=nombre; existente.cat=cat; existente.und=und;
-          existente.stock=stock; existente.min=min; existente.costo=costo;
-          existente.venta=venta; existente.prov=prov; existente.desc=desc;
-          await dbPut('inventario',existente);
-        } else {
-          await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+        productos.push({sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+        if(preview && i%100===0){
+          const pct=Math.round(i/total*100);
+          preview.innerHTML=`<div style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px">
+              <span>Preparando... ${i} de ${total}</span><span>${pct}%</span>
+            </div>
+            <div style="background:var(--bg-input);border-radius:4px;height:8px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:var(--am)"></div>
+            </div>
+          </div>`;
+          await new Promise(r=>setTimeout(r,0));
         }
-        count++;
       }
-      else if(curImpMod==='proveedores'&&r[1]){
-        await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',
-          tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',prod:r[6]||'',ultima:today()});
-        count++;
+      if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Escribiendo en Firebase (batch)...</span>';
+      const count = await dbBatchAdd('inventario', productos);
+      if(preview) preview.innerHTML='<span style="color:var(--vdtx)">✅ '+count+' productos importados</span>';
+      await new Promise(r=>setTimeout(r,1000));
+      await reloadAll(); closeModal('modal-import');
+      renderInventario(); updateDash();
+      await logAction('inventario','Importar',count+' productos');
+      toast(count+' productos importados ✅');
+    } else {
+      // Clientes y proveedores — individual writes
+      let count=0, errors=0;
+      for(let i=0; i<impData.length; i++){
+        const r = impData[i];
+        try{
+          if(curImpMod==='clientes'&&r[1]){
+            await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',
+              cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''});
+            count++;
+          } else if(curImpMod==='proveedores'&&r[1]){
+            await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',
+              tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',prod:r[6]||'',ultima:today()});
+            count++;
+          }
+        }catch(err){ errors++; }
+        if(preview && i%10===0){
+          const pct=Math.round(i/total*100);
+          preview.innerHTML=`<div style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px">
+              <span>Importando... ${i+1} de ${total}</span><span>${pct}%</span>
+            </div>
+            <div style="background:var(--bg-input);border-radius:4px;height:8px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:var(--am)"></div>
+            </div>
+          </div>`;
+          await new Promise(r=>setTimeout(r,0));
+        }
       }
-    } catch(err){
-      errors++;
-      console.warn('Import error row',i,err.message);
+      await reloadAll(); closeModal('modal-import');
+      if(curImpMod==='clientes') renderClientes();
+      if(curImpMod==='proveedores') renderProveedores();
+      updateDash();
+      await logAction(curImpMod,'Importar',count+' registros');
+      toast(count+' registros importados ✅'+(errors?' ('+errors+' errores)':''));
     }
-
-    // Delay every 10 items to avoid rate limiting (429)
-    if(i % 10 === 0){
-      await new Promise(r=>setTimeout(r,200));
-    }
-    // Update progress every BATCH items
-    if(i % BATCH === 0 && preview){
-      const pct = Math.round((i+1)/total*100);
-      preview.innerHTML = `<div style="margin-top:8px">
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px">
-          <span>Importando... ${i+1} de ${total}</span><span>${pct}%</span>
-        </div>
-        <div style="background:var(--bg-input);border-radius:4px;height:8px;overflow:hidden">
-          <div style="width:${pct}%;height:100%;background:var(--am);transition:width .3s"></div>
-        </div>
-      </div>`;
-      // Let browser breathe
-      await new Promise(r=>setTimeout(r,0));
-    }
+  }catch(err){
+    toast('Error: '+err.message,'rojo');
+    console.error('Import error:',err);
   }
-
-  // Reload and close
-  // Wait for Firestore to settle then reload
-  if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Finalizando...</span>';
-  await new Promise(r=>setTimeout(r,1500));
-  await reloadAll();
-  closeModal('modal-import');
-  if(curImpMod==='clientes')    renderClientes();
-  if(curImpMod==='inventario')  renderInventario();
-  if(curImpMod==='proveedores') renderProveedores();
-  updateDash();
-  await logAction(curImpMod,'Importar',count+' registros importados');
-  toast(count+' registros importados ✅'+(errors?' ('+errors+' errores)':''));
   if(btn){ btn.disabled=false; btn.textContent='Confirmar'; }
 }
 function exportarCSV(mod){
@@ -3708,7 +3688,7 @@ async function limpiarSucursal(suc){
          'caja_mov_'+suc,'historial_'+suc,'compras_'+suc];
     for(const col of cols){
       const docs=await fbGetCollection(col);
-      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
+      const batch=DB.batch(); docs.forEach(d=>{if(d.id)batch.delete(DB.collection(col).doc(d.id));}); await batch.commit().catch(()=>{});
     }
     // Also delete pedidos from this sucursal
     if(suc!=='bodega'){
@@ -3728,7 +3708,7 @@ async function limpiarCompartidos(){
   try{
     for(const col of ['proveedores','pedidos']){
       const docs=await fbGetCollection(col);
-      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
+      const batch=DB.batch(); docs.forEach(d=>{if(d.id)batch.delete(DB.collection(col).doc(d.id));}); await batch.commit().catch(()=>{});
     }
     await reloadAll(); updateDash();
     toast('✅ Datos compartidos eliminados','rojo');
@@ -3754,7 +3734,7 @@ async function limpiarTodo(){
     ];
     for(const col of cols){
       const docs=await fbGetCollection(col);
-      for(const d of docs) await fbRequest('DELETE','/'+col+'/'+d.id).catch(()=>{});
+      const batch=DB.batch(); docs.forEach(d=>{if(d.id)batch.delete(DB.collection(col).doc(d.id));}); await batch.commit().catch(()=>{});
     }
     MEM.clientes=[]; MEM.ventas=[]; MEM.cotizaciones=[];
     MEM.inventario=[]; MEM.pedidos=[]; MEM.proveedores=[];
@@ -3776,6 +3756,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
