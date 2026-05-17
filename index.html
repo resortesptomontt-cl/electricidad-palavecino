@@ -1222,6 +1222,8 @@ async function fbRequest(method, path, body){ return null; }
 
 
 
+
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1551,7 +1553,7 @@ async function cambiarPIN(){
 // ================================================================
 //  CLIENTES
 // ================================================================
-function openModalCliente(id=null){
+async function openModalCliente(id=null){
   document.getElementById('tit-cliente').textContent=id?'Editar Cliente':'Nuevo Cliente';
   document.getElementById('cli-id').value=id||'';
   const c=id?MEM.clientes.find(x=>x.id===id):null;
@@ -1574,7 +1576,7 @@ async function guardarCliente(){
   closeModal('modal-cliente'); renderClientes(); updateDash();
   toast(id?'Cliente actualizado ✅':'Cliente registrado ✅');
 }
-function renderClientes(){
+async function renderClientes(){
   document.getElementById('tbl-clientes').innerHTML=MEM.clientes.map(c=>`
     <tr>
       <td style="color:var(--tx2);font-size:12px">${c.rut}</td>
@@ -1600,7 +1602,7 @@ async function delCliente(id){
 // ================================================================
 //  PROVEEDORES
 // ================================================================
-function openModalProveedor(id=null){
+async function openModalProveedor(id=null){
   document.getElementById('tit-prov').textContent=id?'Editar Proveedor':'Nuevo Proveedor';
   document.getElementById('prov-id').value=id||'';
   const p=id?MEM.proveedores.find(x=>x.id===id):null;
@@ -1622,7 +1624,7 @@ async function guardarProveedor(){
   closeModal('modal-proveedor'); renderProveedores();
   toast(id?'Proveedor actualizado ✅':'Proveedor registrado ✅');
 }
-function renderProveedores(){
+async function renderProveedores(){
   document.getElementById('tbl-proveedores').innerHTML=MEM.proveedores.map(p=>`
     <tr>
       <td style="color:var(--tx2);font-size:12px">${p.rut}</td>
@@ -1672,7 +1674,7 @@ function openModalProducto(id=null){
   document.getElementById('modal-producto').classList.add('open');
 }
 async function guardarProducto(){
-  if(!adminGuard()) return;
+  if(SUC==='admin'){ toast('El administrador no puede editar inventario','rojo'); return; }
   const nombre=document.getElementById('prod-nombre').value.trim();
   if(!nombre){ toast('Nombre requerido','rojo'); return; }
   const id=document.getElementById('prod-id').value||null;
@@ -1723,7 +1725,7 @@ async function delProd(id){
   await logAction('Inventario','Eliminar',p.nombre);
   renderInventario(); updateDash(); toast('Producto eliminado','rojo');
 }
-function updateStockBadge(){
+async function updateStockBadge(){
   const crit=MEM.inventario.filter(p=>p.stock<p.min).length;
   const b=document.getElementById('badge-stock');
   b.textContent=crit; b.style.display=crit?'inline':'none';
@@ -1818,7 +1820,7 @@ function selectProd(i,nombre,precio){
   if(inputs[i]){ const qty=inputs[i].querySelectorAll('input')[1]; if(qty) qty.focus(); }
 }
 
-function calcVT(){
+async function calcVT(){
   const sub=VI.reduce((s,it)=>s+(it.qty*it.precio),0);
   const d=parseFloat(document.getElementById('venta-desc').value)||0;
   const dv=sub*d/100;
@@ -1957,11 +1959,11 @@ function renderCI(){
   dl.innerHTML=MEM.inventario.map(p=>`<option value="${p.nombre}">`).join('');
   calcCT();
 }
-function autoFPC(i,nombre){
+async function autoFPC(i,nombre){
   const p=MEM.inventario.find(x=>x.nombre.toLowerCase()===nombre.toLowerCase());
   if(p){ CI[i].precio=p.venta; renderCI(); }
 }
-function calcCT(){
+async function calcCT(){
   const t=CI.reduce((s,it)=>s+(it.qty*it.precio),0);
   document.getElementById('cot-tot').textContent=fmt(t);
 }
@@ -2066,7 +2068,7 @@ async function agregarMovimiento(){
   document.getElementById('mov-monto').value=''; document.getElementById('mov-desc').value='';
   renderCaja(); toast(`${tipo} de ${fmt(monto)} registrado ✅`);
 }
-function calcularCierre(){
+async function calcularCierre(){
   const movs=MEM.movimientos.filter(m=>m.fecha===today());
   const ing=movs.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+m.monto,0);
   const egr=movs.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+m.monto,0);
@@ -2235,7 +2237,7 @@ function renderAlertas(){
 // ================================================================
 //  HISTORIAL
 // ================================================================
-function renderHistorial(){
+async function renderHistorial(){
   const filtro=document.getElementById('hist-filtro').value;
   const lista=filtro?MEM.historial.filter(h=>h.modulo===filtro):MEM.historial;
   const colores={Venta:'bvd',Cotización:'baz',Inventario:'bam',Cliente:'bgr',Proveedor:'bmo',Caja:'bvd',Sistema:'brj'};
@@ -2654,7 +2656,7 @@ async function abrirModalNuevoPedido(){
   m.onclick=e=>{if(e.target===m)cerrarModalPedido();};
   document.body.appendChild(m);
 }
-function cerrarModalPedido(){
+async function cerrarModalPedido(){
   const m=document.getElementById('modal-nuevo-pedido');
   if(m)m.remove();
 }
@@ -2799,13 +2801,13 @@ function resetCompraModal(){
   closeModal('modal-nueva-compra');
 }
 
-function handlePDFDrop(e){
+async function handlePDFDrop(e){
   const file = e.dataTransfer.files[0];
   if(file && file.type === 'application/pdf') procesarDesdeFile(file);
   else toast('Solo se aceptan archivos PDF','rojo');
 }
 
-function procesarFacturaPDF(e){
+async function procesarFacturaPDF(e){
   const file = e.target.files[0];
   if(file) procesarDesdeFile(file);
 }
@@ -3084,7 +3086,7 @@ async function delCompra(id){
   renderCompras(); toast('Registro eliminado','rojo');
 }
 
-function updateComprasBadge(){
+async function updateComprasBadge(){
   const b = document.getElementById('badge-compras');
   if(b){ b.textContent = MEM.compras.length; b.style.display = MEM.compras.length ? 'inline':'none'; }
 }
@@ -3195,7 +3197,7 @@ function togglePin(suc){
   if(el) el.textContent = pinVisible[suc] ? (SUC_PINS[suc]||'----') : '••••';
 }
 
-function cambiarPin(suc){
+async function cambiarPin(suc){
   const nuevo = prompt(`Nuevo PIN para ${SUC_NOMBRES[suc]||suc} (4 dígitos):`);
   if(!nuevo) return;
   if(!/^\d{4}$/.test(nuevo)){ toast('El PIN debe ser exactamente 4 dígitos','rojo'); return; }
@@ -3756,6 +3758,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
+
 
 
 
