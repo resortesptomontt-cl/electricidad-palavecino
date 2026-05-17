@@ -1256,6 +1256,89 @@ async function setStockSucursal(sku, stock, min){
 </script>
 <script>
 
+// ── Categorías dinámicas ──────────────────────────────────
+const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
+  'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
+  'Medición y Control','Iluminación Exterior','Sin categoría'];
+let CATS_OK = [...CATS_DEFAULT];
+
+async function cargarCategorias(){
+  try{
+    const saved = await dbGetConfig('categorias_inventario');
+    if(saved && Array.isArray(saved) && saved.length>0){
+      CATS_OK = saved;
+    } else {
+      CATS_OK = [...CATS_DEFAULT];
+    }
+    actualizarSelectCategorias();
+  }catch(e){ CATS_OK = [...CATS_DEFAULT]; }
+}
+
+function actualizarSelectCategorias(){
+  const filterSel = document.querySelector('select[onchange*="filterBySelect"]');
+  if(filterSel){
+    const cur = filterSel.value;
+    filterSel.innerHTML = '<option value="">Todas las categorías</option>' +
+      CATS_OK.map(c=>`<option value="${c}">${c}</option>`).join('');
+    filterSel.value = cur;
+  }
+  const prodCat = document.getElementById('prod-cat');
+  if(prodCat){
+    const cur = prodCat.value;
+    prodCat.innerHTML = CATS_OK.map(c=>`<option value="${c}">${c}</option>`).join('');
+    prodCat.value = cur;
+  }
+}
+
+async function agregarCategoria(){
+  const nombre = prompt('Nombre de la nueva categoría:');
+  if(!nombre||!nombre.trim()) return;
+  const n = nombre.trim();
+  if(CATS_OK.includes(n)){ toast('Esa categoría ya existe','rojo'); return; }
+  CATS_OK.push(n);
+  await dbSetConfig('categorias_inventario', CATS_OK);
+  actualizarSelectCategorias();
+  renderCategoriasConfig();
+  toast('Categoría agregada ✅','verde');
+}
+
+async function eliminarCategoria(cat){
+  if(cat==='Sin categoría'){ toast('No se puede eliminar esta categoría','rojo'); return; }
+  if(!confirm('¿Eliminar categoría "'+cat+'"?')) return;
+  CATS_OK = CATS_OK.filter(c=>c!==cat);
+  await dbSetConfig('categorias_inventario', CATS_OK);
+  actualizarSelectCategorias();
+  renderCategoriasConfig();
+  toast('Categoría eliminada','rojo');
+}
+
+async function renombrarCategoria(cat){
+  const nuevo = prompt('Nuevo nombre para "'+cat+'":', cat);
+  if(!nuevo||!nuevo.trim()||nuevo===cat) return;
+  const n = nuevo.trim();
+  if(CATS_OK.includes(n)){ toast('Ese nombre ya existe','rojo'); return; }
+  CATS_OK = CATS_OK.map(c=>c===cat?n:c);
+  await dbSetConfig('categorias_inventario', CATS_OK);
+  actualizarSelectCategorias();
+  renderCategoriasConfig();
+  toast('Categoría renombrada ✅','verde');
+}
+
+function renderCategoriasConfig(){
+  const cont = document.getElementById('cats-config-cont');
+  if(!cont) return;
+  cont.innerHTML = CATS_OK.map(cat=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;
+      padding:8px 12px;background:var(--bg-page);border-radius:8px;margin-bottom:6px">
+      <span style="font-size:13px;font-weight:500">${cat}</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-xs" onclick="renombrarCategoria('${cat.replace(/'/g,"\'")}')">✏️</button>
+        ${cat!=='Sin categoría'?`<button class="btn btn-danger btn-xs" onclick="eliminarCategoria('${cat.replace(/'/g,"\'")}')">🗑</button>`:''}
+      </div>
+    </div>`).join('');
+}
+
+
 
 
 
@@ -2511,9 +2594,7 @@ async function confirmarImport(){
 
   try{
     if(curImpMod==='inventario'){
-      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
-        'Protecciones','Cajas y Canaletas','Accesorios y Fijación',
-        'Alta Tensión','Medición y Control','Iluminación Exterior','Sin categoría'];
+      // CATS_OK is global (managed in Configuración)
 
       // Build product list from Excel
       const productos = [];
@@ -4075,6 +4156,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
 
 
 
