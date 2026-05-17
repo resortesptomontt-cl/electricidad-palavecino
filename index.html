@@ -1253,6 +1253,7 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -4006,14 +4007,14 @@ async function renderInvSucursales(){
             <tbody>
               ${inv.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map((p,i)=>{
                 const si = p.stock>=(p.min||1)*2?{cls:'bvd',txt:'Normal'}:p.stock>=(p.min||1)?{cls:'bam',txt:'Bajo'}:{cls:'brj',txt:'Crítico'};
-                return `<tr style="border-bottom:1px solid var(--border);background:\${i%2===0?'':'var(--bg-page)'}">
-                  <td style="padding:5px 8px;color:var(--tx3);font-size:11px">\${p.sku||'—'}</td>
-                  <td style="padding:5px 8px;font-weight:500">\${p.nombre||'—'}</td>
-                  <td style="padding:5px 8px;text-align:center"><span class="badge baz" style="font-size:10px">\${p.cat||'—'}</span></td>
-                  <td style="padding:5px 8px;text-align:center;font-weight:700;color:\${(p.stock||0)<(p.min||1)?'var(--rjtx)':'var(--vdtx)'}">\${p.stock||0}</td>
-                  <td style="padding:5px 8px;text-align:center;color:var(--tx3)">\${p.min||1}</td>
-                  <td style="padding:5px 8px;text-align:center"><span class="badge \${si.cls}" style="font-size:10px">\${si.txt}</span></td>
-                  <td style="padding:5px 8px;text-align:right;color:var(--am)">\${fmt(p.venta||0)}</td>
+                return `<tr style="border-bottom:1px solid var(--border);background:${i%2===0?'':'var(--bg-page)'}">
+                  <td style="padding:5px 8px;color:var(--tx3);font-size:11px">${p.sku||'—'}</td>
+                  <td style="padding:5px 8px;font-weight:500">${p.nombre||'—'}</td>
+                  <td style="padding:5px 8px;text-align:center"><span class="badge baz" style="font-size:10px">${p.cat||'—'}</span></td>
+                  <td style="padding:5px 8px;text-align:center;font-weight:700;color:${(p.stock||0)<(p.min||1)?'var(--rjtx)':'var(--vdtx)'}">${p.stock||0}</td>
+                  <td style="padding:5px 8px;text-align:center;color:var(--tx3)">${p.min||1}</td>
+                  <td style="padding:5px 8px;text-align:center"><span class="badge ${si.cls}" style="font-size:10px">${si.txt}</span></td>
+                  <td style="padding:5px 8px;text-align:right;color:var(--am)">${fmt(p.venta||0)}</td>
                 </tr>`;
               }).join('')||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--tx3)">Sin productos</td></tr>'}
             </tbody>
@@ -4272,6 +4273,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
 
 
 
