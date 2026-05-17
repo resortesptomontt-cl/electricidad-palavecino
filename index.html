@@ -1152,9 +1152,6 @@ async function initDB(){
   if(typeof firebase === 'undefined') throw new Error('Firebase SDK no cargó. Verifica tu conexión.');
   if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   DB = firebase.firestore();
-  // Disable offline persistence to prevent duplicate writes on reconnect
-  DB.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
-  try { await DB.clearPersistence(); } catch(e) { /* ok */ }
 }
 
 // ── Colecciones por sucursal ──────────────────────────────
