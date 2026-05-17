@@ -369,13 +369,13 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="nav-section">Principal</div>
     <div class="nav-item active" onclick="goTo('dashboard',this)"><span class="nav-icon">📊</span><span>Dashboard</span></div>
     <div class="nav-section">Módulos</div>
-    <div class="nav-item" onclick="goTo('clientes',this)"><span class="nav-icon">👥</span><span>Clientes</span></div>
-    <div class="nav-item" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
+    <div class="nav-item" id="nav-clientes" onclick="goTo('clientes',this)"><span class="nav-icon">👥</span><span>Clientes</span></div>
+    <div class="nav-item" id="nav-proveedores" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
     <div class="nav-item" id="nav-inventario" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span id="nav-inv-label">Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
     <div class="nav-item" id="nav-ventas" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
     <div class="nav-item" id="nav-cotizaciones" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
     <div class="nav-item" id="nav-pedidos" onclick="goTo('pedidos',this)"><span class="nav-icon">📬</span><span id="nav-ped-label">Pedidos</span><span class="badge-nav" id="badge-pedidos">0</span></div>
-    <div class="nav-item" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
+    <div class="nav-item" id="nav-compras" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
     <div class="nav-item" id="nav-caja" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-item" id="nav-stock-suc" style="display:none" onclick="goTo('stock_suc',this)"><span class="nav-icon">📊</span><span>Stock Sucursales</span></div>
     <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
@@ -1068,8 +1068,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
 
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
+
+
 
 
 // ════════════════════════════════════════════════════════════════
@@ -1198,8 +1199,11 @@ async function fbDeleteCollection(colPath){
 
 
 
-</script>
-<script>
+
+
+</script>T<script>
+
+
 
 
 
@@ -1336,7 +1340,7 @@ function goTo(page,el){
   document.getElementById('page-title').textContent=(tits[page]||page)+' — '+(SUC_NOMBRES[SUC]||SUC);
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
-  const rend={clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales,reportes:renderReportes,caja_admin:renderCajaAdmin,alertas:renderAlertas};
+  const rend={dashboard:renderDash,clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales,reportes:renderReportes,caja_admin:renderCajaAdmin,alertas:renderAlertas};
   if(rend[page]) rend[page]();
 }
 function filterTable(id,val,cols){
@@ -2161,6 +2165,7 @@ function exportarOrdenCSV(){
 // ================================================================
 //  DASHBOARD
 // ================================================================
+function renderDash(){ updateDash(); }
 function updateDash(){
   if(SUC==='admin') checkAlertasBadge().catch(()=>{});
   const hoy=today();
@@ -3265,8 +3270,6 @@ async function renderReportes(){
       <h2>📈 Reportes Ejecutivos</h2>
       <button class="btn btn-secondary btn-sm" onclick="renderReportes()">🔄 Actualizar</button>
     </div>
-
-    <!-- KPIs principales -->
     <div class="kpi-grid" style="margin-bottom:18px">
       <div class="kpi-card">
         <div class="kpi-val" style="color:var(--am)">${fmt(totalHoy)}</div>
@@ -3289,8 +3292,6 @@ async function renderReportes(){
         <div class="kpi-sub">${ventasHoy.filter(v=>v.suc==='s2').length} ventas</div>
       </div>
     </div>
-
-    <!-- Gráfico ventas 7 días -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-title">📊 Ventas Últimos 7 Días</div>
       <div style="overflow-x:auto">
@@ -3327,7 +3328,6 @@ async function renderReportes(){
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-      <!-- Top productos -->
       <div class="card">
         <div class="card-title">🏆 Top Productos Vendidos</div>
         ${topProd.length ? topProd.map((p,i)=>`
@@ -3342,8 +3342,6 @@ async function renderReportes(){
             </div>
           </div>`).join('') : '<div style="color:var(--tx3);padding:12px;text-align:center">Sin ventas registradas</div>'}
       </div>
-
-      <!-- Stock crítico -->
       <div class="card">
         <div class="card-title">⚠️ Stock Crítico (${criticos.length})</div>
         ${criticos.length ? criticos.slice(0,8).map(p=>`
@@ -3359,8 +3357,6 @@ async function renderReportes(){
           </div>`).join('') : '<div style="color:var(--vdtx);padding:12px;text-align:center">✅ Sin stock crítico</div>'}
       </div>
     </div>
-
-    <!-- Productos sin movimiento -->
     ${sinMovimiento.length ? `
     <div class="card">
       <div class="card-title">💤 Productos Sin Ventas (${sinMovimiento.length})</div>
@@ -3412,8 +3408,6 @@ async function renderCajaAdmin(){
       <h2>💳 Caja Sucursales — ${hoy}</h2>
       <button class="btn btn-secondary btn-sm" onclick="renderCajaAdmin()">🔄 Actualizar</button>
     </div>
-
-    <!-- Comparativa -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
       ${[['s1','Casa Matriz','var(--vd)',c1],['s2','Los Muermos','var(--az)',c2]].map(([suc,nombre,col,c])=>`
       <div class="card">
@@ -3446,8 +3440,6 @@ async function renderCajaAdmin(){
         </div>
       </div>`).join('')}
     </div>
-
-    <!-- Total consolidado -->
     <div class="card" style="text-align:center;padding:20px">
       <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">TOTAL CONSOLIDADO HOY</div>
       <div style="font-size:36px;font-weight:700;color:var(--am)">${fmt(c1.totalVentas + c2.totalVentas)}</div>
@@ -3746,6 +3738,23 @@ window.addEventListener('DOMContentLoaded', ()=>{
   // Always show selector on load — clear any stale session
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>).classList.remove('hidden');
 });
 
 
