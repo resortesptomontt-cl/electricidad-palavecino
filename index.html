@@ -496,7 +496,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
       </div>
       <div class="toolbar">
         <input placeholder="Buscar nombre o SKU..." oninput="filterTable('tbl-inventario',this.value,[0,1,2])" style="width:240px">
-        <select onchange="filterBySelect('tbl-inventario',this.value,3)" style="width:175px">
+        <select onchange="filterBySelect('tbl-inventario',this.value,2)" style="width:175px">
           <option value="">Todas las categorías</option>
           <option>Cables</option><option>Iluminación</option><option>Tableros</option><option>Enchufes</option><option>Herramientas</option><option>Protecciones</option><option>Cajas y Canaletas</option><option>Accesorios y Fijación</option><option>Alta Tensión</option><option>Medición y Control</option><option>Iluminación Exterior</option><option>Sin categoría</option>
         </select>
@@ -734,6 +734,16 @@ tr:hover td{background:rgba(245,196,0,.04)}
                 <button class="btn btn-secondary btn-xs" onclick="exportarCSV('cotizaciones')">Cotizaciones</button>
               </div>
             </div>
+          </div>
+
+          <!-- Categorías de Inventario -->
+          <div class="card">
+            <div class="card-title">🏷️ Categorías de Inventario</div>
+            <div id="cats-config-cont" style="margin-bottom:12px;max-height:320px;overflow-y:auto"></div>
+            <button class="btn btn-primary btn-sm" onclick="agregarCategoria()">+ Nueva Categoría</button>
+          </div>
+
+          <div class="card">
             <div style="border-top:1px solid var(--border);padding-top:10px">
               <div style="font-size:11px;color:var(--rjtx);font-weight:700;margin-bottom:8px">⚠️ ZONA PELIGROSA</div>
               <button class="btn btn-danger btn-xs" onclick="limpiarDB()">🗑 Borrar todos los datos</button>
@@ -1274,6 +1284,8 @@ async function setStockSucursal(sku, stock, min){
 
 
 
+
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1407,9 +1419,11 @@ function filterTable(id,val,cols){
   });
 }
 function filterBySelect(id,val,col){
-  document.querySelectorAll('#'+id+' tr').forEach(r=>{
-    const c=r.cells[col]?r.cells[col].textContent:'';
-    r.style.display=(!val||c.includes(val))?'':'none';
+  document.querySelectorAll('#'+id+' tbody tr').forEach(r=>{
+    if(!r.cells[col]){ r.style.display=''; return; }
+    // Get text including inside spans/badges
+    const c = r.cells[col].textContent.trim();
+    r.style.display=(!val||c===val||c.includes(val))?'':'none';
   });
 }
 function filterStockEst(val){
@@ -2343,6 +2357,8 @@ async function renderConfig(){
   document.getElementById('cfg-apertura').value=CFG.apertura;
   const stats=document.getElementById('db-stats');
   stats.innerHTML=[['👥 Clientes',MEM.clientes.length],['🏭 Proveedores',MEM.proveedores.length],['📦 Productos',MEM.inventario.length],['🧾 Ventas',MEM.ventas.length],['📋 Cotizaciones',MEM.cotizaciones.length],['💰 Movimientos',MEM.movimientos.length]].map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg-input);border-radius:6px"><span style="color:var(--tx2)">${l}</span><strong>${v}</strong></div>`).join('');
+
+  setTimeout(renderCategoriasConfig, 100);
 }
 async function guardarConfig(){
   await dbSetConfig('cfg_nombre',document.getElementById('cfg-nombre').value);
@@ -2414,6 +2430,7 @@ async function restaurarBackup(ev){
     }
     setMsg('Recargando datos...');
     await cargarPins();
+    await cargarCategorias();
     await reloadAll();
     updateDash();
     await logAction('Sistema','Restaurar','Respaldo restaurado');
@@ -3909,6 +3926,7 @@ async function continuarInit(){
     await initDB();
     setMsg('Conectando...');
     await cargarPins();
+    await cargarCategorias();
     setMsg('Cargando datos...');
     await cargarDemoSiVacia();
     await reloadAll();
@@ -4060,6 +4078,8 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
+
 
 
 
