@@ -1234,6 +1234,7 @@ async function setStockSucursal(sku, stock, min){
 
 
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1424,7 +1425,8 @@ async function seleccionarSucursal(suc){
   const show=id=>{const el=document.getElementById(id);if(el)el.style.display='flex';};
   const hide=id=>{const el=document.getElementById(id);if(el)el.style.display='none';};
   ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones',
-   'nav-pedidos','nav-compras','nav-caja','nav-consolidado','nav-stock-suc'].forEach(hide);
+   'nav-pedidos','nav-compras','nav-caja','nav-consolidado','nav-stock-suc',
+   'nav-reportes','nav-caja-admin','nav-alertas'].forEach(hide);
   const il=document.getElementById('nav-inv-label');
   const pl=document.getElementById('nav-ped-label');
   if(suc==='s1'){
@@ -3606,19 +3608,30 @@ async function continuarInit(){
     if(SUC==='admin'){ sb.style.background='var(--nrbg)'; sb.style.color='var(--nrtx)'; sb.style.borderColor='var(--nr)'; }
     else if(SUC==='bodega'){ sb.style.background='var(--azbg)'; sb.style.color='var(--aztx)'; sb.style.borderColor='var(--az)'; }
   }
-  const navCons    = document.getElementById('nav-consolidado');
-  const navVentas  = document.getElementById('nav-ventas');
-  const navCompras = document.getElementById('nav-compras');
-  const navCaja    = document.getElementById('nav-caja');
-  const navCots    = document.getElementById('nav-cotizaciones');
-  const navPedidos = document.getElementById('nav-pedidos');
-  if(navCons)    navCons.style.display    = SUC==='admin'  ? 'flex' : 'none';
-  if(navVentas)  navVentas.style.display  = SUC==='bodega' ? 'none' : 'flex';
-  if(navCompras) navCompras.style.display = SUC==='bodega' ? 'none' : 'flex';
-  if(navCaja)    navCaja.style.display    = SUC==='bodega' ? 'none' : 'flex';
-  if(navCots)    navCots.style.display    = SUC==='bodega' ? 'none' : 'flex';
-  if(navPedidos) navPedidos.style.display = SUC==='bodega' ? 'none' : 'flex';
-  try{
+  // Apply nav visibility based on SUC (same logic as seleccionarSucursal)
+  const _show = id => { const el=document.getElementById(id); if(el) el.style.display='flex'; };
+  const _hide = id => { const el=document.getElementById(id); if(el) el.style.display='none'; };
+  ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones',
+   'nav-pedidos','nav-compras','nav-caja','nav-consolidado','nav-stock-suc',
+   'nav-reportes','nav-caja-admin','nav-alertas'].forEach(_hide);
+  const _il = document.getElementById('nav-inv-label');
+  const _pl = document.getElementById('nav-ped-label');
+  if(SUC==='s1'){
+    ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja'].forEach(_show);
+    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega';
+  } else if(SUC==='s2'){
+    ['nav-clientes','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja'].forEach(_show);
+    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega';
+  } else if(SUC==='bodega'){
+    ['nav-proveedores','nav-inventario','nav-pedidos','nav-stock-suc'].forEach(_show);
+    if(_il) _il.textContent='Inventario Bodega'; if(_pl) _pl.textContent='Pedidos Recibidos';
+  } else if(SUC==='admin'){
+    ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones',
+     'nav-pedidos','nav-compras','nav-caja','nav-consolidado',
+     'nav-reportes','nav-caja-admin','nav-alertas'].forEach(_show);
+    if(_il) _il.textContent='Inventario Global'; if(_pl) _pl.textContent='Todos los Pedidos';
+  }
+    try{
     setMsg('Conectando...');
     await initDB();
     setMsg('Cargando PINs...');
@@ -3772,6 +3785,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
