@@ -1097,7 +1097,7 @@ async function initDB(){
   if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   DB = firebase.firestore();
   // Use long polling for better compatibility
-  DB.settings({experimentalForceLongPolling: true, merge: true});
+  // Settings applied automatically
 }
 
 function colName(store){
