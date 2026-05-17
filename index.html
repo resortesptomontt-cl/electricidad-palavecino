@@ -789,7 +789,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div class="fgrid">
     <div class="fg"><label>SKU / Código</label><input id="prod-sku" placeholder="EP-001"></div>
     <div class="fg"><label>Nombre del Producto</label><input id="prod-nombre" placeholder="Ej: Cable THHN 12 AWG"></div>
-    <div class="fg"><label>Categoría</label><select id="prod-cat"><option>Cables</option><option>Iluminación</option><option>Tableros</option><option>Enchufes</option><option>Herramientas</option><option>Protecciones</option></select></div>
+    <div class="fg"><label>Categoría</label><select id="prod-cat"><option>Cables</option><option>Iluminación</option><option>Tableros</option><option>Enchufes</option><option>Herramientas</option><option>Protecciones</option><option>Cajas y Canaletas</option><option>Accesorios y Fijación</option><option>Alta Tensión</option><option>Medición y Control</option><option>Iluminación Exterior</option><option>Sin categoría</option></select></div>
     <div class="fg"><label>Unidad</label><select id="prod-und"><option>unidad</option><option>metro</option><option>rollo</option><option>caja</option><option>par</option><option>kg</option></select></div>
     <div class="fg"><label>Stock Actual</label><input id="prod-stock" type="number" value="0"></div>
     <div class="fg"><label>Stock Mínimo</label><input id="prod-min" type="number" value="5"></div>
@@ -1213,6 +1213,7 @@ async function setStockSucursal(sku, stock, min){
 
 </script>
 <script>
+
 
 
 
@@ -2429,7 +2430,7 @@ async function confirmarImport(){
   try{
     if(curImpMod==='inventario'){
       // Use batch writes for speed
-      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
+      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión','Medición y Control','Iluminación Exterior','Sin categoría'];
       const productos = [];
       for(let i=0; i<impData.length; i++){
         const r = impData[i];
@@ -3284,10 +3285,21 @@ async function cambiarPin(suc){
 }
 
 async function cargarPins(){
-  // Load saved PINs from Firebase
-  for(const suc of ['s1','s2','bodega','admin']){
-    const saved = await dbGetConfig('pin_'+suc);
-    if(saved) SUC_PINS[suc] = saved;
+  // Load PINs with timeout — don't block if Firebase is slow
+  try{
+    const timeout = new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),3000));
+    await Promise.race([
+      (async()=>{
+        for(const suc of ['s1','s2','bodega','admin']){
+          const saved = await dbGetConfig('pin_'+suc);
+          if(saved) SUC_PINS[suc] = saved;
+        }
+      })(),
+      timeout
+    ]);
+  }catch(e){
+    // Use default PINs if Firebase times out
+    console.warn('cargarPins timeout — using defaults');
   }
 }
 
@@ -3690,7 +3702,7 @@ async function continuarInit(){
     try{
     setMsg('Conectando...');
     await initDB();
-    setMsg('Cargando PINs...');
+    setMsg('Conectando...');
     await cargarPins();
     setMsg('Cargando datos...');
     await cargarDemoSiVacia();
@@ -3837,10 +3849,14 @@ async function dbGetAllRaw(colPath){
 
 // ── DOMContentLoaded ──────────────────────────────────────
 window.addEventListener('DOMContentLoaded', ()=>{
-  // Always show selector on load — clear any stale session
   sessionStorage.removeItem('ep_sucursal');
-  document.getElementById('sel-screen').classList.remove('hidden');
+  // Ensure loading screen is hidden and selector is visible
+  const ls = document.getElementById('loading-screen');
+  const ss = document.getElementById('sel-screen');
+  if(ls) ls.style.display = 'none';
+  if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
 
 
 
