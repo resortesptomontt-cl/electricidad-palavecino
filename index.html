@@ -379,6 +379,10 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="nav-item" id="nav-caja" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-item" id="nav-stock-suc" style="display:none" onclick="goTo('stock_suc',this)"><span class="nav-icon">📊</span><span>Stock Sucursales</span></div>
     <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
+    <!-- Admin-only modules -->
+    <div class="nav-item" id="nav-reportes" style="display:none" onclick="goTo('reportes',this)"><span class="nav-icon">📈</span><span>Reportes</span></div>
+    <div class="nav-item" id="nav-caja-admin" style="display:none" onclick="goTo('caja_admin',this)"><span class="nav-icon">💳</span><span>Caja Sucursales</span></div>
+    <div class="nav-item" id="nav-alertas" style="display:none" onclick="goTo('alertas',this)"><span class="nav-icon">🔔</span><span>Alertas</span><span class="badge-nav" id="badge-alertas"></span></div>
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
     <div class="nav-item" onclick="pedirAccesoConfig(this)"><span class="nav-icon">⚙️</span><span>Configuración</span></div>
@@ -587,6 +591,12 @@ tr:hover td{background:rgba(245,196,0,.04)}
       </div>
     </div>
 
+    <!-- REPORTES (Admin) -->
+    <div class="page" id="page-reportes"></div>
+    <!-- CAJA ADMIN -->
+    <div class="page" id="page-caja_admin"></div>
+    <!-- ALERTAS -->
+    <div class="page" id="page-alertas"></div>
     <!-- STOCK SUCURSALES -->
     <div class="page" id="page-stock_suc"></div>
     <!-- CAJA -->    <div class="page" id="page-caja">
@@ -1197,6 +1207,10 @@ async function fbDeleteCollection(colPath){
 
 
 
+
+
+
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1317,11 +1331,11 @@ function goTo(page,el){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales'};
+  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema'};
   document.getElementById('page-title').textContent=(tits[page]||page)+' — '+(SUC_NOMBRES[SUC]||SUC);
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
-  const rend={clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales};
+  const rend={clientes:renderClientes,proveedores:renderProveedores,inventario:renderInventario,ventas:renderVentas,cotizaciones:renderCotizaciones,pedidos:renderPedidos,compras:renderCompras,consolidado:renderConsolidado,caja:renderCaja,historial:renderHistorial,configuracion:renderConfig,stock_suc:renderStockSucursales,reportes:renderReportes,caja_admin:renderCajaAdmin,alertas:renderAlertas};
   if(rend[page]) rend[page]();
 }
 function filterTable(id,val,cols){
@@ -1401,8 +1415,11 @@ function seleccionarSucursal(suc){
     ['nav-proveedores','nav-inventario','nav-pedidos','nav-stock-suc'].forEach(show);
     if(il)il.textContent='Inventario Bodega'; if(pl)pl.textContent='Pedidos Recibidos';
   }else if(suc==='admin'){
-    ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-consolidado'].forEach(show);
-    if(il)il.textContent='Inventario'; if(pl)pl.textContent='Pedidos';
+    // Admin sees everything in read-only + admin-specific modules
+    ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones',
+     'nav-pedidos','nav-compras','nav-consolidado',
+     'nav-reportes','nav-caja-admin','nav-alertas'].forEach(show);
+    if(il)il.textContent='Inventario Global'; if(pl)pl.textContent='Todos los Pedidos';
   }
   document.getElementById('sel-screen').classList.add('hidden');
   document.getElementById('loading-screen').style.display='flex';
@@ -1533,6 +1550,7 @@ function openModalCliente(id=null){
   document.getElementById('modal-cliente').classList.add('open');
 }
 async function guardarCliente(){
+  if(!adminGuard()) return;
   const nombre=document.getElementById('cli-nombre').value.trim();
   if(!nombre){ toast('El nombre es requerido','rojo'); return; }
   const obj={rut:document.getElementById('cli-rut').value.trim(),nombre,email:document.getElementById('cli-email').value.trim(),tel:document.getElementById('cli-tel').value.trim(),cat:document.getElementById('cli-cat').value,saldo:parseFloat(document.getElementById('cli-saldo').value)||0,dir:document.getElementById('cli-dir').value.trim(),notas:document.getElementById('cli-notas').value.trim()};
@@ -1580,6 +1598,7 @@ function openModalProveedor(id=null){
   document.getElementById('modal-proveedor').classList.add('open');
 }
 async function guardarProveedor(){
+  if(!adminGuard()) return;
   const empresa=document.getElementById('prov-empresa').value.trim();
   if(!empresa){ toast('Nombre de empresa requerido','rojo'); return; }
   const obj={rut:document.getElementById('prov-rut').value.trim(),empresa,contacto:document.getElementById('prov-contacto').value.trim(),tel:document.getElementById('prov-tel').value.trim(),email:document.getElementById('prov-email').value.trim(),cond:document.getElementById('prov-cond').value,ultima:today(),prod:document.getElementById('prov-prod').value.trim(),dir:document.getElementById('prov-dir').value.trim()};
@@ -1642,6 +1661,7 @@ function openModalProducto(id=null){
   document.getElementById('modal-producto').classList.add('open');
 }
 async function guardarProducto(){
+  if(!adminGuard()) return;
   const nombre=document.getElementById('prod-nombre').value.trim();
   if(!nombre){ toast('Nombre requerido','rojo'); return; }
   const id=document.getElementById('prod-id').value||null;
@@ -2136,6 +2156,7 @@ function exportarOrdenCSV(){
 //  DASHBOARD
 // ================================================================
 function updateDash(){
+  if(SUC==='admin') checkAlertasBadge().catch(()=>{});
   const hoy=today();
   const vHoy=MEM.ventas.filter(v=>v.fecha===hoy&&v.estado!=='Anulada');
   const totHoy=vHoy.reduce((s,v)=>s+v.total,0);
@@ -2363,45 +2384,86 @@ function procesarImport(ev){
   }
 }
 async function confirmarImport(){
-  let count=0;
-  for(const r of impData){
-    if(curImpMod==='clientes'&&r[1]){ await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''}); count++; }
-    else if(curImpMod==='inventario'&&r[1]){
-      // Columnas: SKU(0) Nombre(1) Cat(2) Unidad(3) Stock(4) Min(5) Costo(6) Venta(7) Proveedor(8) Desc(9)
-      const CATS_OK = ['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
-      const sku   = String(r[0]||'').trim() || 'EP-'+String(count+1).padStart(4,'0');
-      const nombre= String(r[1]||'').trim();
-      const catRaw= String(r[2]||'').trim();
-      // Validar categoría — si no es válida usar Sin categoría
-      const cat   = CATS_OK.includes(catRaw) ? catRaw : 'Sin categoría';
-      const und   = String(r[3]||'unidad').trim() || 'unidad';
-      const stock = parseFloat(String(r[4]||'0').replace(/[^0-9.-]/g,''))||0;
-      const min   = parseFloat(String(r[5]||'1').replace(/[^0-9.-]/g,''))||1;
-      const costo = parseFloat(String(r[6]||'0').replace(/[^0-9.-]/g,''))||0;
-      const venta = parseFloat(String(r[7]||'0').replace(/[^0-9.-]/g,''))||0;
-      const prov  = String(r[8]||'').trim();
-      const desc  = String(r[9]||'').trim();
-      if(!nombre) continue;
-      // Verificar si el SKU ya existe → actualizar, si no → crear
-      const existente = MEM.inventario.find(p=>p.sku===sku);
-      if(existente){
-        existente.nombre=nombre; existente.cat=cat; existente.und=und;
-        existente.stock=stock; existente.min=min; existente.costo=costo;
-        existente.venta=venta; existente.prov=prov; existente.desc=desc;
-        await dbPut('inventario',existente);
-      } else {
-        await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+  const total = impData.length;
+  if(!total){ toast('Sin datos para importar','rojo'); return; }
+
+  // Show progress
+  const btn = document.getElementById('btn-ci');
+  if(btn){ btn.disabled=true; btn.textContent='Importando...'; }
+  const preview = document.getElementById('import-preview');
+
+  let count=0, errors=0;
+  const BATCH = 20; // Process 20 at a time to show progress
+
+  for(let i=0; i<impData.length; i++){
+    const r = impData[i];
+    try{
+      if(curImpMod==='clientes'&&r[1]){
+        await dbAdd('clientes',{rut:r[0]||'',nombre:r[1],email:r[2]||'',tel:r[3]||'',
+          cat:r[4]||'Particular',saldo:parseFloat(r[5])||0,dir:r[6]||'',notas:''});
+        count++;
       }
-      count++;
+      else if(curImpMod==='inventario'&&r[1]){
+        const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Sin categoría'];
+        const sku    = String(r[0]||'').trim() || 'EP-'+String(i+1).padStart(4,'0');
+        const nombre = String(r[1]||'').trim();
+        const catRaw = String(r[2]||'').trim();
+        const cat    = CATS_OK.includes(catRaw) ? catRaw : 'Sin categoría';
+        const und    = String(r[3]||'unidad').trim()||'unidad';
+        const stock  = parseFloat(String(r[4]||'0').replace(/[^0-9.-]/g,''))||0;
+        const min    = parseFloat(String(r[5]||'1').replace(/[^0-9.-]/g,''))||1;
+        const costo  = parseFloat(String(r[6]||'0').replace(/[^0-9.-]/g,''))||0;
+        const venta  = parseFloat(String(r[7]||'0').replace(/[^0-9.-]/g,''))||0;
+        const prov   = String(r[8]||'').trim();
+        const desc   = String(r[9]||'').trim();
+        if(!nombre) continue;
+        const existente = MEM.inventario.find(p=>p.sku===sku);
+        if(existente){
+          existente.nombre=nombre; existente.cat=cat; existente.und=und;
+          existente.stock=stock; existente.min=min; existente.costo=costo;
+          existente.venta=venta; existente.prov=prov; existente.desc=desc;
+          await dbPut('inventario',existente);
+        } else {
+          await dbAdd('inventario',{sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
+        }
+        count++;
+      }
+      else if(curImpMod==='proveedores'&&r[1]){
+        await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',
+          tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',prod:r[6]||'',ultima:today()});
+        count++;
+      }
+    } catch(err){
+      errors++;
+      console.warn('Import error row',i,err.message);
     }
-    else if(curImpMod==='proveedores'&&r[1]){ await dbAdd('proveedores',{rut:r[0]||'',empresa:r[1],contacto:r[2]||'',tel:r[3]||'',email:r[4]||'',cond:r[5]||'Contado',ultima:today(),prod:r[6]||'',dir:''}); count++; }
+
+    // Update progress every BATCH items
+    if(i % BATCH === 0 && preview){
+      const pct = Math.round((i+1)/total*100);
+      preview.innerHTML = `<div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px">
+          <span>Importando... ${i+1} de ${total}</span><span>${pct}%</span>
+        </div>
+        <div style="background:var(--bg-input);border-radius:4px;height:8px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:var(--am);transition:width .3s"></div>
+        </div>
+      </div>`;
+      // Let browser breathe
+      await new Promise(r=>setTimeout(r,0));
+    }
   }
-  await reloadAll(); closeModal('modal-import');
-  if(curImpMod==='clientes') renderClientes();
+
+  // Reload and close
+  await reloadAll();
+  closeModal('modal-import');
+  if(curImpMod==='clientes')   renderClientes();
   if(curImpMod==='inventario') renderInventario();
   if(curImpMod==='proveedores') renderProveedores();
-  updateDash(); await logAction(curImpMod,'Importar',count+' registros importados');
-  toast(`${count} registros importados ✅`);
+  updateDash();
+  await logAction(curImpMod,'Importar',count+' registros importados');
+  toast(count+' registros importados ✅'+(errors?' ('+errors+' errores)':''));
+  if(btn){ btn.disabled=false; btn.textContent='Confirmar'; }
 }
 function exportarCSV(mod){
   let h='',rows=[];
@@ -3129,6 +3191,379 @@ async function cargarPins(){
   }
 }
 
+
+// ════════════════════════════════════════════════════════════════
+//  MÓDULO REPORTES EJECUTIVOS (Admin)
+// ════════════════════════════════════════════════════════════════
+async function renderReportes(){
+  const cont = document.getElementById('page-reportes');
+  if(!cont) return;
+  cont.innerHTML = '<div style="padding:20px;color:var(--tx3)">⚡ Cargando reportes...</div>';
+
+  // Load all data from both branches
+  const [vs1,vs2,is1,is2,ib] = await Promise.all([
+    fbGetCollection('ventas_s1'),
+    fbGetCollection('ventas_s2'),
+    fbGetCollection('inventario_s1'),
+    fbGetCollection('inventario_s2'),
+    fbGetCollection('inventario_bodega'),
+  ]);
+
+  const allVentas = [...vs1.map(v=>({...v,suc:'s1'})), ...vs2.map(v=>({...v,suc:'s2'}))];
+  const hoy = today();
+  const mesActual = hoy.slice(0,7);
+
+  // KPIs
+  const ventasHoy = allVentas.filter(v=>v.fecha===hoy && v.estado!=='Anulada');
+  const ventasMes  = allVentas.filter(v=>(v.fecha||'').startsWith(mesActual) && v.estado!=='Anulada');
+  const totalHoy   = ventasHoy.reduce((s,v)=>s+(v.total||0),0);
+  const totalMes   = ventasMes.reduce((s,v)=>s+(v.total||0),0);
+  const totalS1Hoy = ventasHoy.filter(v=>v.suc==='s1').reduce((s,v)=>s+(v.total||0),0);
+  const totalS2Hoy = ventasHoy.filter(v=>v.suc==='s2').reduce((s,v)=>s+(v.total||0),0);
+
+  // Top productos vendidos (from items)
+  const prodCount = {};
+  allVentas.forEach(v=>(v.items||[]).forEach(i=>{
+    if(!prodCount[i.nombre]) prodCount[i.nombre]={nombre:i.nombre,qty:0,total:0};
+    prodCount[i.nombre].qty += i.qty||1;
+    prodCount[i.nombre].total += (i.precio||0)*(i.qty||1);
+  }));
+  const topProd = Object.values(prodCount).sort((a,b)=>b.total-a.total).slice(0,8);
+
+  // Ventas por día (últimos 7 días)
+  const dias7 = Array.from({length:7},(_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-i);
+    return d.toISOString().slice(0,10);
+  }).reverse();
+  const ventasPorDia = dias7.map(d=>({
+    fecha:d,
+    s1: vs1.filter(v=>v.fecha===d&&v.estado!=='Anulada').reduce((s,v)=>s+(v.total||0),0),
+    s2: vs2.filter(v=>v.fecha===d&&v.estado!=='Anulada').reduce((s,v)=>s+(v.total||0),0),
+  }));
+
+  // Stock crítico
+  const criticos = [
+    ...is1.filter(p=>p.stock<(p.min||1)).map(p=>({...p,suc:'Casa Matriz'})),
+    ...is2.filter(p=>p.stock<(p.min||1)).map(p=>({...p,suc:'Los Muermos'})),
+    ...ib.filter(p=>p.stock<(p.min||1)).map(p=>({...p,suc:'Bodega'})),
+  ];
+
+  // Products sin movimiento (stock > 0 pero ventas_count = 0)
+  const sinMovimiento = [...is1,...is2].filter(p=>p.stock>0&&!(p.ventas_count||0));
+
+  cont.innerHTML = `
+    <div class="section-header">
+      <h2>📈 Reportes Ejecutivos</h2>
+      <button class="btn btn-secondary btn-sm" onclick="renderReportes()">🔄 Actualizar</button>
+    </div>
+
+    <!-- KPIs principales -->
+    <div class="kpi-grid" style="margin-bottom:18px">
+      <div class="kpi-card">
+        <div class="kpi-val" style="color:var(--am)">${fmt(totalHoy)}</div>
+        <div class="kpi-label">Ventas Hoy (Total)</div>
+        <div class="kpi-sub">${ventasHoy.length} transacciones</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" style="color:var(--am)">${fmt(totalMes)}</div>
+        <div class="kpi-label">Ventas del Mes</div>
+        <div class="kpi-sub">${ventasMes.length} transacciones</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" style="color:var(--vd)">${fmt(totalS1Hoy)}</div>
+        <div class="kpi-label">🏪 Casa Matriz Hoy</div>
+        <div class="kpi-sub">${ventasHoy.filter(v=>v.suc==='s1').length} ventas</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" style="color:var(--az)">${fmt(totalS2Hoy)}</div>
+        <div class="kpi-label">🏪 Los Muermos Hoy</div>
+        <div class="kpi-sub">${ventasHoy.filter(v=>v.suc==='s2').length} ventas</div>
+      </div>
+    </div>
+
+    <!-- Gráfico ventas 7 días -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📊 Ventas Últimos 7 Días</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%">
+          <thead><tr>
+            <th>Fecha</th>
+            <th style="color:var(--vd)">🏪 Casa Matriz</th>
+            <th style="color:var(--az)">🏪 Los Muermos</th>
+            <th>Total</th>
+            <th style="width:40%">Barra</th>
+          </tr></thead>
+          <tbody>${ventasPorDia.map(d=>{
+            const total=d.s1+d.s2;
+            const max=Math.max(...ventasPorDia.map(x=>x.s1+x.s2))||1;
+            const pct=Math.round(total/max*100);
+            const p1=total?Math.round(d.s1/total*100):0;
+            const p2=100-p1;
+            return `<tr>
+              <td style="font-size:12px">\${d.fecha}</td>
+              <td style="color:var(--vdtx)">\${fmt(d.s1)}</td>
+              <td style="color:var(--aztx)">\${fmt(d.s2)}</td>
+              <td style="font-weight:700">\${fmt(total)}</td>
+              <td>
+                <div style="height:16px;border-radius:4px;overflow:hidden;background:var(--bg-input);display:flex">
+                  \${d.s1?'<div style="width:'+p1+'%;background:var(--vd);height:100%"></div>':''}
+                  \${d.s2?'<div style="width:'+p2+'%;background:var(--az);height:100%"></div>':''}
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- Top productos -->
+      <div class="card">
+        <div class="card-title">🏆 Top Productos Vendidos</div>
+        ${topProd.length ? topProd.map((p,i)=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <span style="font-size:11px;color:var(--tx3);margin-right:6px">#${i+1}</span>
+              <strong style="font-size:13px">${p.nombre}</strong>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;color:var(--am)">${fmt(p.total)}</div>
+              <div style="font-size:11px;color:var(--tx3)">${p.qty} uds</div>
+            </div>
+          </div>`).join('') : '<div style="color:var(--tx3);padding:12px;text-align:center">Sin ventas registradas</div>'}
+      </div>
+
+      <!-- Stock crítico -->
+      <div class="card">
+        <div class="card-title">⚠️ Stock Crítico (${criticos.length})</div>
+        ${criticos.length ? criticos.slice(0,8).map(p=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-size:13px;font-weight:600">${p.nombre}</div>
+              <div style="font-size:11px;color:var(--tx3)">${p.suc}</div>
+            </div>
+            <div style="text-align:right">
+              <span style="color:var(--rjtx);font-weight:700">${p.stock||0}</span>
+              <span style="color:var(--tx3);font-size:11px"> / mín ${p.min||1}</span>
+            </div>
+          </div>`).join('') : '<div style="color:var(--vdtx);padding:12px;text-align:center">✅ Sin stock crítico</div>'}
+      </div>
+    </div>
+
+    <!-- Productos sin movimiento -->
+    ${sinMovimiento.length ? `
+    <div class="card">
+      <div class="card-title">💤 Productos Sin Ventas (${sinMovimiento.length})</div>
+      <div class="tw"><table>
+        <thead><tr><th>SKU</th><th>Producto</th><th>Stock</th><th>Valor en bodega</th></tr></thead>
+        <tbody>${sinMovimiento.slice(0,10).map(p=>`
+          <tr>
+            <td style="font-size:11px;color:var(--tx3)">${p.sku||'—'}</td>
+            <td>${p.nombre}</td>
+            <td style="text-align:center">${p.stock}</td>
+            <td style="text-align:right;color:var(--tx2)">${fmt((p.costo||0)*p.stock)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>` : ''}
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CAJA SUCURSALES (Admin)
+// ════════════════════════════════════════════════════════════════
+async function renderCajaAdmin(){
+  const cont = document.getElementById('page-caja_admin');
+  if(!cont) return;
+  cont.innerHTML = '<div style="padding:20px;color:var(--tx3)">⚡ Cargando caja...</div>';
+
+  const [mov1, mov2, v1, v2] = await Promise.all([
+    fbGetCollection('caja_mov_s1'),
+    fbGetCollection('caja_mov_s2'),
+    fbGetCollection('ventas_s1'),
+    fbGetCollection('ventas_s2'),
+  ]);
+
+  const hoy = today();
+  const calcCaja = (movs, ventas, suc) => {
+    const movHoy = movs.filter(m=>m.fecha===hoy);
+    const ventasHoy = ventas.filter(v=>v.fecha===hoy && v.estado!=='Anulada');
+    const ingresos = movHoy.filter(m=>m.tipo==='Ingreso').reduce((s,m)=>s+(m.monto||0),0);
+    const egresos  = movHoy.filter(m=>m.tipo==='Egreso').reduce((s,m)=>s+(m.monto||0),0);
+    const totalVentas = ventasHoy.reduce((s,v)=>s+(v.total||0),0);
+    return {movHoy, ingresos, egresos, totalVentas, saldo: ingresos - egresos};
+  };
+
+  const c1 = calcCaja(mov1, v1, 's1');
+  const c2 = calcCaja(mov2, v2, 's2');
+
+  cont.innerHTML = `
+    <div class="section-header">
+      <h2>💳 Caja Sucursales — ${hoy}</h2>
+      <button class="btn btn-secondary btn-sm" onclick="renderCajaAdmin()">🔄 Actualizar</button>
+    </div>
+
+    <!-- Comparativa -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      ${[['s1','Casa Matriz','var(--vd)',c1],['s2','Los Muermos','var(--az)',c2]].map(([suc,nombre,col,c])=>`
+      <div class="card">
+        <div class="card-title" style="color:${col}">🏪 ${nombre}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+          <div style="background:var(--bg-page);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:11px;color:var(--tx3)">Ingresos</div>
+            <div style="font-weight:700;color:var(--vdtx)">${fmt(c.ingresos)}</div>
+          </div>
+          <div style="background:var(--bg-page);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:11px;color:var(--tx3)">Egresos</div>
+            <div style="font-weight:700;color:var(--rjtx)">${fmt(c.egresos)}</div>
+          </div>
+          <div style="background:var(--bg-page);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:11px;color:var(--tx3)">Ventas Hoy</div>
+            <div style="font-weight:700;color:var(--am)">${fmt(c.totalVentas)}</div>
+          </div>
+          <div style="background:var(--bg-page);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:11px;color:var(--tx3)">Saldo Neto</div>
+            <div style="font-weight:700;color:${c.saldo>=0?'var(--vdtx)':'var(--rjtx)'}">${fmt(c.saldo)}</div>
+          </div>
+        </div>
+        <div class="card-title" style="font-size:12px">Movimientos del día (${c.movHoy.length})</div>
+        <div style="max-height:200px;overflow-y:auto">
+          ${c.movHoy.length ? c.movHoy.map(m=>`
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+              <span style="color:${m.tipo==='Ingreso'?'var(--vdtx)':'var(--rjtx)'}">${m.tipo==='Ingreso'?'▲':'▼'} ${m.desc||'—'}</span>
+              <span style="font-weight:700;color:${m.tipo==='Ingreso'?'var(--vdtx)':'var(--rjtx)'}">${fmt(m.monto||0)}</span>
+            </div>`).join('') : '<div style="color:var(--tx3);padding:8px;text-align:center">Sin movimientos hoy</div>'}
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Total consolidado -->
+    <div class="card" style="text-align:center;padding:20px">
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px">TOTAL CONSOLIDADO HOY</div>
+      <div style="font-size:36px;font-weight:700;color:var(--am)">${fmt(c1.totalVentas + c2.totalVentas)}</div>
+      <div style="font-size:13px;color:var(--tx3);margin-top:4px">
+        ${c1.movHoy.length + c2.movHoy.length} movimientos · Saldo neto ${fmt(c1.saldo + c2.saldo)}
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ALERTAS DEL SISTEMA (Admin)
+// ════════════════════════════════════════════════════════════════
+async function renderAlertas(){
+  const cont = document.getElementById('page-alertas');
+  if(!cont) return;
+  cont.innerHTML = '<div style="padding:20px;color:var(--tx3)">⚡ Analizando sistema...</div>';
+
+  const [is1,is2,ib,cs1,cs2,ped,cot1,cot2] = await Promise.all([
+    fbGetCollection('inventario_s1'),
+    fbGetCollection('inventario_s2'),
+    fbGetCollection('inventario_bodega'),
+    fbGetCollection('cotizaciones_s1'),
+    fbGetCollection('cotizaciones_s2'),
+    fbGetCollection('pedidos'),
+    fbGetCollection('cotizaciones_s1'),
+    fbGetCollection('cotizaciones_s2'),
+  ]);
+
+  const alertas = [];
+  const hoy = today();
+  const SUC_LABEL = {s1:'Casa Matriz', s2:'Los Muermos', bodega:'Bodega'};
+
+  // Stock crítico
+  [...is1.map(p=>({...p,suc:'s1'})),...is2.map(p=>({...p,suc:'s2'})),...ib.map(p=>({...p,suc:'bodega'}))]
+    .filter(p=>(p.stock||0)<(p.min||1))
+    .forEach(p=>alertas.push({
+      tipo:'danger', icono:'📦',
+      titulo:'Stock crítico: '+p.nombre,
+      desc:SUC_LABEL[p.suc]+' — Stock: '+p.stock+' / Mínimo: '+(p.min||1),
+      accion: null
+    }));
+
+  // Cotizaciones por vencer (próximos 2 días)
+  const en2Dias = new Date(); en2Dias.setDate(en2Dias.getDate()+2);
+  const en2DiasStr = en2Dias.toISOString().slice(0,10);
+  [...cs1.map(c=>({...c,suc:'s1'})),...cs2.map(c=>({...c,suc:'s2'}))]
+    .filter(c=>c.estado==='Pendiente' && c.validaHasta && c.validaHasta<=en2DiasStr)
+    .forEach(c=>alertas.push({
+      tipo:'warning', icono:'📋',
+      titulo:'Cotización por vencer: '+(c.num||c.id?.slice(-6)),
+      desc:SUC_LABEL[c.suc]+' — Vence: '+c.validaHasta+' — Cliente: '+(c.cliente||'—'),
+      accion: null
+    }));
+
+  // Pedidos sin despachar >2 días
+  ped.filter(p=>p.estado==='Pendiente'||p.estado==='En preparación').forEach(p=>{
+    const dias = p.fecha_pedido ? Math.floor((Date.now()-new Date(p.fecha_pedido).getTime())/86400000) : 0;
+    if(dias>=2) alertas.push({
+      tipo:'warning', icono:'📬',
+      titulo:'Pedido pendiente: '+(p.num||p.id?.slice(-6)),
+      desc:SUC_LABEL[p.origen]+' → Bodega — '+dias+' días en estado: '+p.estado,
+      accion: null
+    });
+  });
+
+  // Update badge
+  const badge = document.getElementById('badge-alertas');
+  if(badge){ badge.textContent=alertas.length||''; badge.style.display=alertas.length?'inline':'none'; }
+
+  const colores = {danger:'var(--rjbg)',warning:'var(--nrbg)',info:'var(--azbg)'};
+  const textos  = {danger:'var(--rjtx)',warning:'var(--nrtx)',info:'var(--aztx)'};
+
+  cont.innerHTML = `
+    <div class="section-header">
+      <h2>🔔 Alertas del Sistema</h2>
+      <button class="btn btn-secondary btn-sm" onclick="renderAlertas()">🔄 Actualizar</button>
+    </div>
+    ${alertas.length ? alertas.map(a=>`
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 16px;margin-bottom:10px;
+                  background:${colores[a.tipo]||'var(--bg-card)'};border-radius:10px;
+                  border-left:4px solid ${textos[a.tipo]||'var(--border)'}">
+        <span style="font-size:22px;flex-shrink:0">${a.icono}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;color:${textos[a.tipo]};font-size:13px">${a.titulo}</div>
+          <div style="color:var(--tx2);font-size:12px;margin-top:2px">${a.desc}</div>
+        </div>
+      </div>`).join('') : `
+      <div style="text-align:center;padding:48px 20px">
+        <div style="font-size:48px;margin-bottom:12px">✅</div>
+        <div style="font-size:18px;font-weight:700;color:var(--vdtx)">Sin alertas activas</div>
+        <div style="color:var(--tx3);font-size:13px;margin-top:6px">Todo el sistema está funcionando con normalidad</div>
+      </div>`}
+  `;
+}
+
+// ── Auto-check alertas al entrar como admin ────────────────
+async function checkAlertasBadge(){
+  try{
+    const [is1,is2,ib,ped] = await Promise.all([
+      fbGetCollection('inventario_s1'),
+      fbGetCollection('inventario_s2'),
+      fbGetCollection('inventario_bodega'),
+      fbGetCollection('pedidos'),
+    ]);
+    let count = 0;
+    count += [...is1,...is2,...ib].filter(p=>(p.stock||0)<(p.min||1)).length;
+    count += ped.filter(p=>p.estado==='Pendiente'||p.estado==='En preparación').length;
+    const b = document.getElementById('badge-alertas');
+    if(b){ b.textContent=count||''; b.style.display=count?'inline':'none'; }
+  }catch(e){}
+}
+
+// ── Make ventas/cotizaciones/clientes/inventario READ-ONLY for admin ──
+function isAdminReadOnly(){
+  return SUC==='admin';
+}
+
+
+// ── Admin read-only guard ─────────────────────────────────
+function adminGuard(fn){
+  if(SUC==='admin'){ toast('El administrador solo puede visualizar datos','naranja'); return false; }
+  return true;
+}
+
 // ================================================================
 //  INICIO
 // ================================================================
@@ -3173,6 +3608,7 @@ async function continuarInit(){
       document.getElementById('loading-screen').style.display='none';
       document.getElementById('app').style.display='flex';
       updateDash(); actualizarRolBadge();
+      if(SUC==='admin') checkAlertasBadge();
     },420);
     document.getElementById('db-status-badge').textContent='🔥 Firebase conectado';
     document.getElementById('db-status-badge').className='db-status db-ok';
@@ -3302,6 +3738,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
+
+
+
 
 
 
