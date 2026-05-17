@@ -1235,6 +1235,7 @@ async function setStockSucursal(sku, stock, min){
 
 
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -2578,6 +2579,8 @@ async function badgePedidos(){
 
 async function renderPedidosSucursal(cont){
   badgePedidos();
+  // Load bodega stock for reference
+  const bodegaInv = await fbGetCollection('inventario_bodega');
   const kpis=[['Pendiente','⏳','var(--nr)'],['En preparación','🔧','var(--az)'],['Despachado','🚚','var(--am)'],['Recibido','✅','var(--vd)']];
   cont.innerHTML=`
     <div class="section-header"><h2>📬 Pedidos a Bodega</h2>
@@ -2587,25 +2590,78 @@ async function renderPedidosSucursal(cont){
       <div class="kpi-card"><div style="font-size:22px">${ico}</div>
         <div class="kpi-val" style="color:${col}">${MEM.pedidos.filter(p=>p.estado===est).length}</div>
         <div class="kpi-label">${est}</div></div>`).join('')}</div>
-    <div class="card"><div class="card-title">Mis Pedidos</div>
-      <div class="tw"><table>
-        <thead><tr><th>#</th><th>Fecha</th><th>Productos</th><th>Estado</th><th>Notas Bodega</th><th>Acciones</th></tr></thead>
-        <tbody>${MEM.pedidos.length?MEM.pedidos.map(p=>`
-          <tr>
-            <td><strong>${p.num||p.id?.slice(-6)||'—'}</strong></td>
-            <td style="font-size:12px">${p.fecha_pedido||p.fecha||''}</td>
-            <td style="font-size:12px">${(p.items||[]).map(i=>i.nombre+' ×'+i.qty_solicitado).join('<br>')}</td>
-            <td><span class="badge" style="background:${estadoColor(p.estado)}">${p.estado||'Pendiente'}</span></td>
-            <td style="font-size:12px;color:var(--tx2)">${p.notas_bodega||'—'}</td>
-            <td style="display:flex;gap:4px;flex-wrap:wrap">
-              ${p.estado==='Despachado'?`<button class="btn btn-primary btn-xs" onclick="confirmarRecepcion('${p.id}')">✅ Recibido</button>`:''}
-              ${p.estado==='Pendiente'?`<button class="btn btn-danger btn-xs" onclick="cancelarPedido('${p.id}')">🗑</button>`:''}
-              <button class="btn btn-secondary btn-xs" onclick="verDetallePedido('${p.id}')">👁</button>
-            </td>
-          </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tx3)">Sin pedidos aún</td></tr>'}
-        </tbody>
-      </table></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- Stock disponible en Bodega (solo lectura) -->
+      <div class="card">
+        <div class="card-title">🏭 Stock Disponible en Bodega <span style="font-size:11px;color:var(--tx3);font-weight:400">(solo lectura)</span></div>
+        ${bodegaInv.length ? `
+        <div style="margin-bottom:8px">
+          <input placeholder="Buscar en bodega..." oninput="filtrarBodegaRef(this.value)"
+            style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--tx);font-size:12px">
+        </div>
+        <div style="max-height:320px;overflow-y:auto" id="bodega-stock-ref">
+          <table style="width:100%;font-size:12px">
+            <thead><tr>
+              <th style="padding:4px 6px;text-align:left;color:var(--tx2)">Producto</th>
+              <th style="padding:4px 6px;text-align:center;color:var(--tx2)">Stock</th>
+              <th style="padding:4px 6px;text-align:center;color:var(--tx2)">Unidad</th>
+            </tr></thead>
+            <tbody id="bodega-ref-tbody">
+              ${bodegaInv.map(p=>`
+                <tr style="border-bottom:1px solid var(--border)" data-nombre="${(p.nombre||'').toLowerCase()}">
+                  <td style="padding:5px 6px">
+                    <div style="font-weight:600">${p.nombre||'—'}</div>
+                    <div style="font-size:10px;color:var(--tx3)">${p.sku||''} · ${p.cat||''}</div>
+                  </td>
+                  <td style="text-align:center;font-weight:700;color:${(p.stock||0)<(p.min||1)?'var(--rjtx)':'var(--vdtx)'}">${p.stock||0}</td>
+                  <td style="text-align:center;color:var(--tx3)">${p.und||'un'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : '<div style="color:var(--tx3);padding:20px;text-align:center">Bodega sin stock registrado aún</div>'}
+      </div>
+
+      <!-- Mis pedidos -->
+      <div class="card">
+        <div class="card-title">📋 Mis Pedidos</div>
+        <div style="max-height:380px;overflow-y:auto">
+          <table style="width:100%;font-size:12px">
+            <thead><tr>
+              <th style="padding:4px 6px">#</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+            </tr></thead>
+            <tbody>${MEM.pedidos.length?MEM.pedidos.map(p=>`
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:5px 6px;font-weight:700">${p.num||p.id?.slice(-6)||'—'}</td>
+                <td style="font-size:11px;color:var(--tx2)">${p.fecha_pedido||''}</td>
+                <td><span class="badge" style="background:${estadoColor(p.estado)};font-size:10px">${p.estado||'Pendiente'}</span></td>
+                <td style="display:flex;gap:4px;padding:4px 0">
+                  ${p.estado==='Despachado'?`<button class="btn btn-primary btn-xs" onclick="confirmarRecepcion('${p.id}')">✅</button>`:''}
+                  ${p.estado==='Pendiente'?`<button class="btn btn-danger btn-xs" onclick="cancelarPedido('${p.id}')">🗑</button>`:''}
+                  <button class="btn btn-secondary btn-xs" onclick="verDetallePedido('${p.id}')">👁</button>
+                </td>
+              </tr>`).join(''):'<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--tx3)">Sin pedidos aún</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <button class="btn btn-primary" style="width:100%" onclick="abrirModalNuevoPedido()">📬 Nuevo Pedido a Bodega</button>
+        </div>
+      </div>
     </div>`;
+
+  // Store bodega inv for filtering
+  window._bodegaRef = bodegaInv;
+}
+
+function filtrarBodegaRef(q){
+  const tbody = document.getElementById('bodega-ref-tbody');
+  if(!tbody || !window._bodegaRef) return;
+  const f = q.toLowerCase();
+  tbody.querySelectorAll('tr').forEach(tr=>{
+    const nombre = tr.getAttribute('data-nombre')||'';
+    tr.style.display = nombre.includes(f) ? '' : 'none';
+  });
 }
 
 async function renderPedidosBodega(cont){
@@ -2642,7 +2698,7 @@ async function renderPedidosBodega(cont){
 }
 
 async function abrirModalNuevoPedido(){
-  const bodegaInv=await fbGetCollection('inventario_bodega');
+  const bodegaInv=window._bodegaRef||await fbGetCollection('inventario_bodega');
   window._bInv=bodegaInv;
   const rows=bodegaInv.length?bodegaInv.map(p=>`
     <tr>
@@ -3785,6 +3841,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
