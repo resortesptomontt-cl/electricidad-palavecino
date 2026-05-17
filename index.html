@@ -1273,6 +1273,7 @@ async function setStockSucursal(sku, stock, min){
 
 
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -2370,27 +2371,58 @@ async function backupCompleto(){
 async function restaurarBackup(ev){
   const file=ev.target.files[0]; if(!file) return;
   if(!confirm('⚠️ Esto reemplazará TODOS los datos actuales. ¿Continuar?')) return;
-  const txt=await file.text();
+  const btn = ev.target;
+  btn.disabled = true;
+  setMsg('Leyendo archivo...');
   try{
-    const data=JSON.parse(txt);
-    // Limpiar colecciones antes de restaurar
-    for(const store of ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras']){
-      const docs = await dbGetAll(store);
-      for(const d of docs) await dbDelete(store, d.id);
+    const txt = await file.text();
+    const data = JSON.parse(txt);
+    setMsg('Limpiando datos existentes...');
+    // Delete existing data
+    for(const store of ['clientes','ventas','cotizaciones','caja_mov','historial','pedidos','compras','proveedores','inventario']){
+      try{
+        const snap = await DB.collection(colName(store)).get();
+        if(!snap.empty){
+          const batch = DB.batch();
+          snap.docs.forEach(d=>batch.delete(d.ref));
+          await batch.commit();
+        }
+      }catch(e){}
     }
-    // Restaurar datos
-    for(const x of (data.clientes||[]))     await dbAdd('clientes',x);
-    for(const x of (data.proveedores||[]))  await dbAdd('proveedores',x);
-    for(const x of (data.inventario||[]))   await dbAdd('inventario',x);
-    for(const x of (data.ventas||[]))       await dbAdd('ventas',x);
-    for(const x of (data.cotizaciones||[])) await dbAdd('cotizaciones',x);
-    for(const x of (data.movimientos||[]))  await dbAdd('caja_mov',x);
-    if(data.config){ await dbSetConfig('apertura_caja',data.config.apertura||50000); await dbSetConfig('folio_next',data.config.folio_next||1); await dbSetConfig('cot_next',data.config.cot_next||1); }
+    // Restore inventario with batch (fast)
+    if(data.inventario?.length){
+      setMsg('Restaurando inventario ('+data.inventario.length+' productos)...');
+      await dbBatchAdd('inventario', data.inventario);
+    }
+    // Restore proveedores with batch
+    if(data.proveedores?.length){
+      setMsg('Restaurando proveedores ('+data.proveedores.length+')...');
+      await dbBatchAdd('proveedores', data.proveedores);
+    }
+    // Restore other collections
+    if(data.clientes?.length){
+      setMsg('Restaurando clientes...');
+      await dbBatchAdd('clientes', data.clientes);
+    }
+    if(data.ventas?.length)       await dbBatchAdd('ventas', data.ventas);
+    if(data.cotizaciones?.length) await dbBatchAdd('cotizaciones', data.cotizaciones);
+    if(data.movimientos?.length)  await dbBatchAdd('caja_mov', data.movimientos);
+    if(data.config){
+      await dbSetConfig('apertura_caja', data.config.apertura||50000);
+      await dbSetConfig('folio_next', data.config.folio_next||1);
+      await dbSetConfig('cot_next', data.config.cot_next||1);
+    }
+    setMsg('Recargando datos...');
     await cargarPins();
-  await reloadAll(); updateDash();
-    await logAction('Sistema','Restaurar','Respaldo restaurado desde archivo');
+    await reloadAll();
+    updateDash();
+    await logAction('Sistema','Restaurar','Respaldo restaurado');
     toast('Respaldo restaurado ✅');
-  } catch(e){ toast('Error al leer el archivo','rojo'); }
+  }catch(e){
+    toast('Error: '+e.message,'rojo');
+    console.error('Restore error:',e);
+  }
+  btn.disabled = false;
 }
 // limpiarDB — ver versión Firebase más arriba
 
@@ -4028,6 +4060,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
 
 
 
