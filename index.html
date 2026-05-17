@@ -473,8 +473,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
         <input placeholder="Buscar nombre o SKU..." oninput="filterTable('tbl-inventario',this.value,[0,1,2])" style="width:240px">
         <select onchange="filterBySelect('tbl-inventario',this.value,3)" style="width:175px">
           <option value="">Todas las categorías</option>
-          <option>Cables</option><option>Iluminación</option><option>Tableros</option>
-          <option>Enchufes</option><option>Herramientas</option><option>Protecciones</option>
+          <option>Cables</option><option>Iluminación</option><option>Tableros</option><option>Enchufes</option><option>Herramientas</option><option>Protecciones</option><option>Cajas y Canaletas</option><option>Accesorios y Fijación</option><option>Alta Tensión</option><option>Medición y Control</option><option>Iluminación Exterior</option><option>Sin categoría</option>
         </select>
         <select onchange="filterStockEst(this.value)" style="width:155px">
           <option value="">Todos los estados</option>
@@ -1213,6 +1212,7 @@ async function setStockSucursal(sku, stock, min){
 
 </script>
 <script>
+
 
 
 
@@ -2429,14 +2429,17 @@ async function confirmarImport(){
 
   try{
     if(curImpMod==='inventario'){
-      // Use batch writes for speed
-      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas','Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión','Medición y Control','Iluminación Exterior','Sin categoría'];
+      const CATS_OK=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
+        'Protecciones','Cajas y Canaletas','Accesorios y Fijación',
+        'Alta Tensión','Medición y Control','Iluminación Exterior','Sin categoría'];
+
+      // Build product list from Excel
       const productos = [];
       for(let i=0; i<impData.length; i++){
         const r = impData[i];
         if(!r[1]) continue;
         const sku    = String(r[0]||'').trim() || 'EP-'+String(i+1).padStart(4,'0');
-        const nombre = String(r[1]||'').trim();
+        const nombre = String(r[1]||'').trim().toUpperCase();
         const catRaw = String(r[2]||'').trim();
         const cat    = CATS_OK.includes(catRaw) ? catRaw : 'Sin categoría';
         const und    = String(r[3]||'unidad').trim()||'unidad';
@@ -2448,29 +2451,46 @@ async function confirmarImport(){
         const desc   = String(r[9]||'').trim();
         if(!nombre) continue;
         productos.push({sku,nombre,cat,und,stock,min,costo,venta,prov,desc,ventas_count:0});
-        if(preview && i%100===0){
-          const pct=Math.round(i/total*100);
-          preview.innerHTML=`<div style="margin-top:8px">
-            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-bottom:4px">
-              <span>Preparando... ${i} de ${total}</span><span>${pct}%</span>
-            </div>
-            <div style="background:var(--bg-input);border-radius:4px;height:8px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:var(--am)"></div>
-            </div>
-          </div>`;
-          await new Promise(r=>setTimeout(r,0));
+      }
+
+      if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Verificando duplicados...</span>';
+      await new Promise(r=>setTimeout(r,0));
+
+      // Check for duplicates against existing inventory
+      const existentes = await dbGetAll('inventario');
+      const existMap = {}; // nombre.toUpperCase() → doc
+      existentes.forEach(p=>{ existMap[p.nombre?.toUpperCase()] = p; });
+
+      const nuevos    = [];
+      const duplicados = [];
+
+      for(const p of productos){
+        if(existMap[p.nombre]){
+          duplicados.push({nuevo:p, existente:existMap[p.nombre]});
+        } else {
+          nuevos.push(p);
         }
       }
-      if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Escribiendo en Firebase (batch)...</span>';
+
+      // If duplicates found, show confirmation modal
+      if(duplicados.length > 0){
+        if(btn){ btn.disabled=false; btn.textContent='Confirmar'; }
+        await mostrarModalDuplicados(duplicados, nuevos);
+        return;
+      }
+
+      // No duplicates — batch insert all
+      if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Importando '+productos.length+' productos...</span>';
       const count = await dbBatchAdd('inventario', productos);
       if(preview) preview.innerHTML='<span style="color:var(--vdtx)">✅ '+count+' productos importados</span>';
-      await new Promise(r=>setTimeout(r,1000));
+      await new Promise(r=>setTimeout(r,800));
       await reloadAll(); closeModal('modal-import');
       renderInventario(); updateDash();
       await logAction('inventario','Importar',count+' productos');
       toast(count+' productos importados ✅');
+
     } else {
-      // Clientes y proveedores — individual writes
+      // Clientes y proveedores
       let count=0, errors=0;
       for(let i=0; i<impData.length; i++){
         const r = impData[i];
@@ -2510,6 +2530,125 @@ async function confirmarImport(){
     console.error('Import error:',err);
   }
   if(btn){ btn.disabled=false; btn.textContent='Confirmar'; }
+}
+
+// ── Modal de duplicados ───────────────────────────────────
+async function mostrarModalDuplicados(duplicados, nuevos){
+  return new Promise(resolve=>{
+    const m = document.createElement('div');
+    m.className='overlay open';
+    m.id='modal-duplicados';
+    m.innerHTML=`
+      <div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h3>⚠️ Productos Duplicados Detectados</h3>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--tx2);font-size:13px;margin-bottom:12px">
+            Se encontraron <strong style="color:var(--nrtx)">${duplicados.length} productos</strong> que ya existen en el inventario.
+            ¿Qué deseas hacer?
+          </p>
+          <div style="max-height:280px;overflow-y:auto;margin-bottom:16px">
+            <table style="width:100%;font-size:12px">
+              <thead><tr style="background:var(--bg-input)">
+                <th style="padding:6px 8px;text-align:left">Producto en Excel</th>
+                <th style="padding:6px 8px;text-align:left">Proveedor</th>
+                <th style="padding:6px 8px;text-align:left">Existente en sistema</th>
+                <th style="padding:6px 8px;text-align:left">Proveedor</th>
+              </tr></thead>
+              <tbody>
+                ${duplicados.slice(0,50).map((d,i)=>`
+                  <tr style="border-bottom:1px solid var(--border);${i%2===0?'':'background:var(--bg-page)'}">
+                    <td style="padding:5px 8px;color:var(--nrtx)">${d.nuevo.nombre}</td>
+                    <td style="padding:5px 8px;color:var(--tx3)">${d.nuevo.prov||'—'}</td>
+                    <td style="padding:5px 8px">${d.existente.nombre}</td>
+                    <td style="padding:5px 8px;color:var(--tx3)">${d.existente.prov||'—'}</td>
+                  </tr>`).join('')}
+                ${duplicados.length>50?`<tr><td colspan="4" style="padding:8px;text-align:center;color:var(--tx3)">...y ${duplicados.length-50} más</td></tr>`:''}
+              </tbody>
+            </table>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+            <div style="background:var(--azbg);border-radius:8px;padding:12px;font-size:12px">
+              <strong style="color:var(--aztx)">📋 Solo agregar nuevos</strong><br>
+              <span style="color:var(--tx2)">Agrega ${nuevos.length} productos nuevos.<br>Los ${duplicados.length} duplicados NO se modifican.</span>
+            </div>
+            <div style="background:var(--nrbg);border-radius:8px;padding:12px;font-size:12px">
+              <strong style="color:var(--nrtx)">🔄 Reemplazar todos</strong><br>
+              <span style="color:var(--tx2)">Actualiza los ${duplicados.length} existentes con los datos del Excel + agrega ${nuevos.length} nuevos.</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="gap:10px">
+          <button class="btn btn-secondary" onclick="document.getElementById('modal-duplicados').remove();resolve('cancel')">
+            Cancelar
+          </button>
+          <button class="btn btn-secondary" style="border-color:var(--az);color:var(--aztx)" 
+            onclick="document.getElementById('modal-duplicados').remove();resolve('solo_nuevos')">
+            📋 Solo agregar nuevos (${nuevos.length})
+          </button>
+          <button class="btn btn-primary"
+            onclick="document.getElementById('modal-duplicados').remove();resolve('reemplazar')">
+            🔄 Reemplazar todos (${duplicados.length+nuevos.length})
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+
+    // Override resolve to handle the action
+    const originalResolve = resolve;
+    m.querySelectorAll('button').forEach(btn=>{
+      // buttons already call resolve via onclick
+    });
+
+    // We need to intercept and process after user choice
+    window._resolveImport = async(accion)=>{
+      document.getElementById('modal-duplicados')?.remove();
+      if(accion==='cancel') return;
+
+      const preview = document.getElementById('import-preview');
+      const btnCi   = document.getElementById('btn-ci');
+      if(btnCi){ btnCi.disabled=true; btnCi.textContent='Importando...'; }
+
+      try{
+        let count = 0;
+        if(accion==='solo_nuevos' && nuevos.length>0){
+          if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Agregando '+nuevos.length+' productos nuevos...</span>';
+          count = await dbBatchAdd('inventario', nuevos);
+          toast(count+' productos nuevos agregados ✅');
+        } else if(accion==='reemplazar'){
+          // Update existing
+          if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Actualizando existentes...</span>';
+          const updateBatch = DB.batch();
+          const col = DB.collection('inventario_'+(SUC||'s1'));
+          for(const {nuevo, existente} of duplicados){
+            const ref = col.doc(existente.id);
+            const {id:_, ...data} = nuevo;
+            updateBatch.update(ref, {...data, ts:Date.now()});
+          }
+          await updateBatch.commit();
+          // Add new ones
+          if(nuevos.length>0){
+            if(preview) preview.innerHTML='<span style="color:var(--aztx)">⚡ Agregando '+nuevos.length+' nuevos...</span>';
+            await dbBatchAdd('inventario', nuevos);
+          }
+          count = duplicados.length + nuevos.length;
+          toast(count+' productos procesados ✅');
+        }
+        await reloadAll(); closeModal('modal-import');
+        renderInventario(); updateDash();
+        await logAction('inventario','Importar',count+' productos ('+accion+')');
+      }catch(e){ toast('Error: '+e.message,'rojo'); }
+      if(btnCi){ btnCi.disabled=false; btnCi.textContent='Confirmar'; }
+    };
+
+    // Rewrite onclick buttons
+    m.querySelectorAll('[onclick*="resolve"]').forEach(btn=>{
+      const action = btn.getAttribute('onclick').match(/resolve\('(\w+)'\)/)?.[1];
+      if(action) btn.setAttribute('onclick',`window._resolveImport('${action}')`);
+    });
+    originalResolve();
+  });
 }
 async function exportarCSV(mod){
   let h='',rows=[];
@@ -3856,6 +3995,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
 
 
 
