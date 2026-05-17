@@ -1254,6 +1254,9 @@ async function fbDeleteCollection(colPath){
 
 
 
+
+
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -3974,112 +3977,111 @@ async function adminGuard(fn){
 //  MÓDULOS ADMIN — Inventario Sucursales + Clientes por Sucursal
 // ════════════════════════════════════════════════════════════════
 async function renderInvSucursales(){
-  const cont = document.getElementById('page-inv_sucursales');
-  if(!cont) return;
-  cont.innerHTML = '<div class="section-header"><h2>🏪 Inventario Sucursales</h2><button class="btn btn-secondary btn-sm" onclick="renderInvSucursales()">🔄 Actualizar</button></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
-  
-  const [invS1, invS2, invBod] = await Promise.all([
-    fbGetCollection('inventario_s1'),
-    fbGetCollection('inventario_s2'),
-    fbGetCollection('inventario_bodega'),
-  ]);
-
-  // Get active tab from url hash or default s1
-  const renderTab = (label, inv, col) => `
-    <div style="margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <h3 style="font-size:15px;font-weight:700;color:${col}">${label} <span style="font-size:12px;color:var(--tx3);font-weight:400">(${inv.length} productos)</span></h3>
-      </div>
-      <div style="background:var(--bg-card);border-radius:10px;overflow:hidden">
-        <div style="overflow-x:auto;max-height:400px;overflow-y:auto">
-          <table style="width:100%;font-size:12px">
-            <thead style="position:sticky;top:0;background:var(--bg-input)">
-              <tr>
-                <th style="padding:8px;text-align:left">SKU</th>
-                <th style="padding:8px;text-align:left">Producto</th>
-                <th style="padding:8px;text-align:center">Categoría</th>
-                <th style="padding:8px;text-align:center">Stock</th>
-                <th style="padding:8px;text-align:center">Mín</th>
-                <th style="padding:8px;text-align:center">Estado</th>
-                <th style="padding:8px;text-align:right">P.Venta</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${inv.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map((p,i)=>{
-                const si = p.stock>=(p.min||1)*2?{cls:'bvd',txt:'Normal'}:p.stock>=(p.min||1)?{cls:'bam',txt:'Bajo'}:{cls:'brj',txt:'Crítico'};
-                return `<tr style="border-bottom:1px solid var(--border);background:${i%2===0?'':'var(--bg-page)'}">
-                  <td style="padding:5px 8px;color:var(--tx3);font-size:11px">${p.sku||'—'}</td>
-                  <td style="padding:5px 8px;font-weight:500">${p.nombre||'—'}</td>
-                  <td style="padding:5px 8px;text-align:center"><span class="badge baz" style="font-size:10px">${p.cat||'—'}</span></td>
-                  <td style="padding:5px 8px;text-align:center;font-weight:700;color:${(p.stock||0)<(p.min||1)?'var(--rjtx)':'var(--vdtx)'}">${p.stock||0}</td>
-                  <td style="padding:5px 8px;text-align:center;color:var(--tx3)">${p.min||1}</td>
-                  <td style="padding:5px 8px;text-align:center"><span class="badge ${si.cls}" style="font-size:10px">${si.txt}</span></td>
-                  <td style="padding:5px 8px;text-align:right;color:var(--am)">${fmt(p.venta||0)}</td>
-                </tr>`;
-              }).join('')||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--tx3)">Sin productos</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>`;
-
-  cont.innerHTML = `
-    <div class="section-header">
-      <h2>🏪 Inventario Sucursales</h2>
+  const cont=document.getElementById('page-inv_sucursales'); if(!cont)return;
+  cont.innerHTML='<div class="section-header"><h2>🏪 Inventario Sucursales</h2></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
+  const [s1,s2,bod]=await Promise.all([fbGetCollection('inventario_s1'),fbGetCollection('inventario_s2'),fbGetCollection('inventario_bodega')]);
+  window._iSuc={s1,s2,bodega:bod};
+  cont.innerHTML=`
+    <div class="section-header"><h2>🏪 Inventario Sucursales</h2>
       <button class="btn btn-secondary btn-sm" onclick="renderInvSucursales()">🔄 Actualizar</button>
     </div>
-    ${renderTab('🏪 Casa Matriz — Antonio Varas 1117', invS1, 'var(--vdtx)')}
-    ${renderTab('🏪 Sucursal Los Muermos', invS2, 'var(--aztx)')}
-    ${renderTab('🏭 Bodega General', invBod, 'var(--nrtx)')}
-  `;
+    ${_invSucBlock('s1','🏪 Casa Matriz',s1,'var(--vdtx)')}
+    ${_invSucBlock('s2','🏪 Los Muermos',s2,'var(--aztx)')}
+    ${_invSucBlock('bodega','🏭 Bodega General',bod,'var(--nrtx)')}`;
+}
+
+function _invSucBlock(id,label,inv,col){
+  const sorted=inv.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+  const rows=sorted.map((p,i)=>{
+    const si=p.stock>=(p.min||1)*2?'Normal':p.stock>=(p.min||1)?'Bajo':'Crítico';
+    const sc=p.stock>=(p.min||1)*2?'bvd':p.stock>=(p.min||1)?'bam':'brj';
+    const bg=i%2===0?'':'background:var(--bg-page)';
+    return '<tr style="border-bottom:1px solid var(--border);'+bg+'" data-nom="'+(p.nombre||'').toLowerCase()+'">'
+      +'<td style="padding:5px 8px;color:var(--tx3);font-size:11px">'+(p.sku||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-weight:500">'+(p.nombre||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:center"><span class="badge baz" style="font-size:10px">'+(p.cat||'—')+'</span></td>'
+      +'<td style="padding:5px 8px;text-align:center;font-weight:700;color:'+(p.stock<(p.min||1)?'var(--rjtx)':'var(--vdtx)')+'">'+(p.stock||0)+'</td>'
+      +'<td style="padding:5px 8px;text-align:center;color:var(--tx3)">'+(p.min||1)+'</td>'
+      +'<td style="padding:5px 8px;text-align:center"><span class="badge '+sc+'" style="font-size:10px">'+si+'</span></td>'
+      +'<td style="padding:5px 8px;text-align:right;color:var(--am)">'+fmt(p.venta||0)+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div style="margin-bottom:20px">'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+    +'<h3 style="font-size:14px;font-weight:700;color:'+col+'">'+label+' <span style="font-size:11px;color:var(--tx3);font-weight:400">('+inv.length+' productos)</span></h3>'
+    +'<input placeholder="Buscar..." oninput="_filtInv(this,this.dataset.tb)" data-tb="tbody-inv-'+id+'" '
+    +'style="flex:1;max-width:240px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--tx);font-size:12px">'
+    +'</div>'
+    +'<div style="background:var(--bg-card);border-radius:10px;overflow:hidden">'
+    +'<div style="overflow-x:auto;max-height:380px;overflow-y:auto">'
+    +'<table style="width:100%;font-size:12px">'
+    +'<thead style="position:sticky;top:0;background:var(--bg-input)">'
+    +'<tr><th style="padding:7px 8px;text-align:left">SKU</th>'
+    +'<th style="padding:7px 8px;text-align:left">Producto</th>'
+    +'<th style="padding:7px 8px;text-align:center">Categoría</th>'
+    +'<th style="padding:7px 8px;text-align:center">Stock</th>'
+    +'<th style="padding:7px 8px;text-align:center">Mín</th>'
+    +'<th style="padding:7px 8px;text-align:center">Estado</th>'
+    +'<th style="padding:7px 8px;text-align:right">P.Venta</th></tr></thead>'
+    +'<tbody id="tbody-inv-'+id+'">'+(rows||'<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--tx3)">Sin productos</td></tr>')+'</tbody>'
+    +'</table></div></div></div>';
+}
+
+function _filtInv(input,tbodyId){
+  const q=input.value.toLowerCase();
+  const rows=document.getElementById(tbodyId)?.querySelectorAll('tr');
+  if(!rows) return;
+  rows.forEach(r=>{ r.style.display=(!q||r.dataset.nom?.includes(q))?'':'none'; });
 }
 
 async function renderClientesSuc(){
-  const cont = document.getElementById('page-clientes_suc');
-  if(!cont) return;
-  cont.innerHTML = '<div class="section-header"><h2>👥 Clientes por Sucursal</h2></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
-  
-  const [cliS1, cliS2] = await Promise.all([
-    fbGetCollection('clientes_s1'),
-    fbGetCollection('clientes_s2'),
-  ]);
-
-  const renderCliTable = (label, clientes, col) => `
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title" style="color:${col}">${label} <span style="font-size:11px;color:var(--tx3);font-weight:400">(${clientes.length} clientes)</span></div>
-      <div style="overflow-x:auto;max-height:350px;overflow-y:auto">
-        <table style="width:100%;font-size:12px">
-          <thead style="position:sticky;top:0;background:var(--bg-input)">
-            <tr>
-              <th style="padding:7px 8px;text-align:left">RUT</th>
-              <th style="padding:7px 8px;text-align:left">Nombre</th>
-              <th style="padding:7px 8px;text-align:center">Categoría</th>
-              <th style="padding:7px 8px;text-align:left">Teléfono</th>
-              <th style="padding:7px 8px;text-align:right">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${clientes.sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'')).map((c,i)=>`
-              <tr style="border-bottom:1px solid var(--border);background:${i%2===0?'':'var(--bg-page)'}">
-                <td style="padding:5px 8px;color:var(--tx3)">${c.rut||'—'}</td>
-                <td style="padding:5px 8px;font-weight:500">${c.nombre||'—'}</td>
-                <td style="padding:5px 8px;text-align:center"><span class="badge" style="font-size:10px">${c.cat||'Particular'}</span></td>
-                <td style="padding:5px 8px;color:var(--tx2)">${c.tel||'—'}</td>
-                <td style="padding:5px 8px;text-align:right;color:${(c.saldo||0)>0?'var(--rjtx)':'var(--vdtx)'}">${fmt(c.saldo||0)}</td>
-              </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--tx3)">Sin clientes</td></tr>'}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-
-  cont.innerHTML = `
-    <div class="section-header">
-      <h2>👥 Clientes por Sucursal</h2>
+  const cont=document.getElementById('page-clientes_suc'); if(!cont)return;
+  cont.innerHTML='<div class="section-header"><h2>👥 Clientes por Sucursal</h2></div><div style="padding:20px;color:var(--tx3)">⚡ Cargando...</div>';
+  const [c1,c2]=await Promise.all([fbGetCollection('clientes_s1'),fbGetCollection('clientes_s2')]);
+  cont.innerHTML=`
+    <div class="section-header"><h2>👥 Clientes por Sucursal</h2>
       <button class="btn btn-secondary btn-sm" onclick="renderClientesSuc()">🔄 Actualizar</button>
     </div>
-    ${renderCliTable('🏪 Casa Matriz', cliS1, 'var(--vdtx)')}
-    ${renderCliTable('🏪 Los Muermos', cliS2, 'var(--aztx)')}
-  `;
+    ${_cliSucBlock('cs1','🏪 Casa Matriz',c1,'var(--vdtx)')}
+    ${_cliSucBlock('cs2','🏪 Los Muermos',c2,'var(--aztx)')}`;
+}
+
+function _cliSucBlock(id,label,clientes,col){
+  const sorted=clientes.slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+  const rows=sorted.map((c,i)=>{
+    const bg=i%2===0?'':'background:var(--bg-page)';
+    const saldo=c.saldo||0;
+    return '<tr style="border-bottom:1px solid var(--border);'+bg+'" data-nom="'+(c.nombre||'').toLowerCase()+'">'
+      +'<td style="padding:5px 8px;color:var(--tx3)">'+(c.rut||'—')+'</td>'
+      +'<td style="padding:5px 8px;font-weight:500">'+(c.nombre||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:center"><span class="badge" style="font-size:10px">'+(c.cat||'Particular')+'</span></td>'
+      +'<td style="padding:5px 8px;color:var(--tx2)">'+(c.tel||'—')+'</td>'
+      +'<td style="padding:5px 8px;text-align:right;color:'+(saldo>0?'var(--rjtx)':'var(--vdtx)')+'">'+fmt(saldo)+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<div class="card" style="margin-bottom:16px">'
+    +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">'
+    +'<div class="card-title" style="color:'+col+';margin:0">'+label+' <span style="font-size:11px;color:var(--tx3);font-weight:400">('+clientes.length+' clientes)</span></div>'
+    +'<input placeholder="Buscar cliente..." oninput="_filtCli(this,this.dataset.tb)" data-tb="tbody-cli-'+id+'" '
+    +'style="flex:1;max-width:240px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--tx);font-size:12px">'
+    +'</div>'
+    +'<div style="overflow-x:auto;max-height:320px;overflow-y:auto">'
+    +'<table style="width:100%;font-size:12px">'
+    +'<thead style="position:sticky;top:0;background:var(--bg-input)">'
+    +'<tr><th style="padding:7px 8px;text-align:left">RUT</th>'
+    +'<th style="padding:7px 8px;text-align:left">Nombre</th>'
+    +'<th style="padding:7px 8px;text-align:center">Categoría</th>'
+    +'<th style="padding:7px 8px;text-align:left">Teléfono</th>'
+    +'<th style="padding:7px 8px;text-align:right">Saldo</th></tr></thead>'
+    +'<tbody id="tbody-cli-'+id+'">'+(rows||'<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--tx3)">Sin clientes</td></tr>')+'</tbody>'
+    +'</table></div></div>';
+}
+
+function _filtCli(input,tbodyId){
+  const q=input.value.toLowerCase();
+  const rows=document.getElementById(tbodyId)?.querySelectorAll('tr');
+  if(!rows) return;
+  rows.forEach(r=>{ r.style.display=(!q||r.dataset.nom?.includes(q))?'':'none'; });
 }
 
 // ================================================================
@@ -4273,6 +4275,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
 });
+
+
+
 
 
 
