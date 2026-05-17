@@ -1233,6 +1233,7 @@ async function setStockSucursal(sku, stock, min){
 
 
 
+
 let SUC = sessionStorage.getItem('ep_sucursal') || '';
 const SUC_NOMBRES = {
   s1:     'Casa Matriz — Antonio Varas 1117',
@@ -1581,7 +1582,9 @@ async function guardarCliente(){
   else await dbAdd('clientes',obj);
   MEM.clientes=await dbGetAll('clientes');
   await logAction('Cliente',accion,nombre);
-  closeModal('modal-cliente'); renderClientes(); updateDash();
+  closeModal('modal-cliente');
+  renderClientes();
+  updateDash();
   toast(id?'Cliente actualizado ✅':'Cliente registrado ✅');
 }
 async function renderClientes(){
@@ -1690,10 +1693,13 @@ async function guardarProducto(){
   const obj={sku:document.getElementById('prod-sku').value.trim()||'EP-'+(MEM.inventario.length+1).toString().padStart(3,'0'),nombre,cat:document.getElementById('prod-cat').value,und:document.getElementById('prod-und').value,stock:parseFloat(document.getElementById('prod-stock').value)||0,min:parseFloat(document.getElementById('prod-min').value)||5,costo:parseFloat(document.getElementById('prod-costo').value)||0,venta:parseFloat(document.getElementById('prod-venta').value)||0,prov:document.getElementById('prod-prov').value.trim(),desc:document.getElementById('prod-desc').value.trim(),ventas_count:existing?existing.ventas_count||0:0};
   const accion=id?'Editar':'Nuevo';
   if(id){ obj.id=id; await dbPut('inventario',obj); }
-  else await dbAdd('inventario',obj);
-  MEM.inventario=await dbGetAll('inventario');
+  else { await dbAdd('inventario',obj); }
+  // Reload from Firestore then render
+  MEM.inventario = await dbGetAll('inventario');
+  closeModal('modal-producto');
+  renderInventario();
+  updateDash();
   await logAction('Inventario',accion,nombre+' (stock: '+obj.stock+')');
-  closeModal('modal-producto'); renderInventario(); updateDash();
   toast(id?'Producto actualizado ✅':'Producto registrado ✅');
 }
 async function siInfo(s,m){ const r=s/m; if(r>=2)return{cls:'bvd',txt:'Normal',bc:'fok'}; if(r>=1)return{cls:'bam',txt:'Bajo',bc:'fwn'}; return{cls:'brj',txt:'Crítico',bc:'flo'}; }
@@ -3766,6 +3772,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
   document.getElementById('sel-screen').classList.remove('hidden');
 });
+
 
 
 
