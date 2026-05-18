@@ -1288,6 +1288,7 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -6540,17 +6541,22 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
   // Allow physical keyboard for PIN input (selector + config modal)
   document.addEventListener('keydown', e=>{
+    // Skip if user is typing in any input, textarea or select
+    const tag = document.activeElement?.tagName;
+    const isTyping = tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT';
+
     // Config/Historial PIN modal
     const cfgModal = document.getElementById('modal-acceso-config');
-    if(cfgModal && cfgModal.classList.contains('open')){
+    if(cfgModal && cfgModal.classList.contains('open') && !isTyping){
       if(e.key>='0' && e.key<='9'){ cfgPinKey(e.key); e.preventDefault(); return; }
       else if(e.key==='Backspace'){ cfgPinKey('del'); e.preventDefault(); return; }
       else if(e.key==='Escape'){ cfgModal.classList.remove('open'); e.preventDefault(); return; }
       else if(e.key==='Enter'){ document.getElementById('cfg-pin-ok')?.click(); e.preventDefault(); return; }
     }
-    // Selector PIN
+    // Selector PIN — only when PIN pad is visible and not typing in a field
     const pinWrap = document.getElementById('sel-pin-wrap');
     if(!pinWrap || pinWrap.style.display==='none') return;
+    if(isTyping) return;
     if(e.key>='0' && e.key<='9'){ selPinKey(e.key); e.preventDefault(); }
     else if(e.key==='Backspace'){ selPinKey('del'); e.preventDefault(); }
     else if(e.key==='Escape'){ selPinKey('clr'); e.preventDefault(); }
@@ -6561,6 +6567,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 });
+
 
 
 
