@@ -1258,6 +1258,7 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -1521,7 +1522,7 @@ function filterStockEst(val){
   document.querySelectorAll('#tbl-inventario tr').forEach(r=>{
     if(!val){ r.style.display=''; return; }
     if(!r.cells||r.cells.length<9){ r.style.display=val?'none':''; return; }
-    const e = r.cells[8] ? r.cells[8].textContent.trim() : '';
+    const e = r.cells[9] ? r.cells[9].textContent.trim() : '';
     r.style.display = e.includes(val) ? '' : 'none';
   });
 }
@@ -4349,6 +4350,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 });
+
 
 
 
