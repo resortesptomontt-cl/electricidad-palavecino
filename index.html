@@ -1257,6 +1257,7 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -1850,7 +1851,7 @@ async function siInfo(s,m){ const r=s/m; if(r>=2)return{cls:'bvd',txt:'Normal',b
 async function renderInventario(){
   const inv = MEM.inventario;
   if(!inv.length){
-    document.getElementById('tbl-inventario').innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--tx3)">Sin productos. Usa <strong>Importar Excel</strong> o <strong>+ Nuevo Producto</strong>.</td></tr>';
+    document.getElementById('tbl-inventario').innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--tx3)">Sin productos. Usa <strong>Importar Excel</strong> o <strong>+ Nuevo Producto</strong>.</td></tr>';
     return;
   }
   document.getElementById('tbl-inventario').innerHTML=inv.map(p=>{
@@ -1861,6 +1862,7 @@ async function renderInventario(){
       <td style="color:var(--tx3);font-size:11.5px">${p.sku}</td>
       <td><strong>${p.nombre}</strong>${p.desc?`<br><span style="font-size:10.5px;color:var(--tx3)">${p.desc.slice(0,38)}</span>`:''}</td>
       <td><span class="badge baz">${p.cat}</span></td>
+      <td style="font-size:11.5px;color:var(--tx2)">${p.prov||'—'}</td>
       <td><div style="display:flex;align-items:center;gap:7px"><span style="font-weight:700;font-size:14px">${p.stock}</span><div class="sbar"><div class="sfill ${si.bc}" style="width:${pct}%"></div></div><span style="font-size:11px;color:var(--tx3)">${p.und}</span></div></td>
       <td style="color:var(--tx3)">${p.min}</td>
       <td style="color:var(--tx2)">${fmt(p.costo)}</td>
@@ -3010,26 +3012,68 @@ async function renderPedidosBodega(cont){
 }
 
 async function abrirModalNuevoPedido(){
-  const bodegaInv=window._bodegaRef||await fbGetCollection('inventario_bodega');
-  window._bInv=bodegaInv;
-  const rows=bodegaInv.length?bodegaInv.map(p=>`
-    <tr>
-      <td>${p.nombre}</td>
-      <td style="text-align:center;color:var(--vdtx)">${p.stock||0} ${p.und||''}</td>
-      <td><input type="number" min="0" max="${p.stock||999}" value="0" style="width:65px;text-align:center" id="pq-${p.sku}"></td>
-    </tr>`).join(''):'<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--tx3)">Bodega sin stock registrado</td></tr>';
-  const m=document.createElement('div');
+  const bodegaInv = (window._bInv || await fbGetCollection('inventario_bodega'))
+    .filter(p=>p.stock>0)  // only show items with stock
+    .sort((a,b)=>(b.stock||0)-(a.stock||0));  // sort by stock descending
+  window._bInv = bodegaInv;
+  const allInv = await fbGetCollection('inventario_bodega');
+  window._bInvAll = allInv.sort((a,b)=>(b.stock||0)-(a.stock||0));
+
+  const buildRows = (inv) => inv.map(p=>`
+    <tr data-sku="${p.sku}" data-nom="${(p.nombre||'').toLowerCase()}" data-prov="${(p.prov||'').toLowerCase()}">
+      <td style="padding:5px 8px">
+        <div style="font-weight:600;font-size:12px">${p.nombre}</div>
+        <div style="font-size:10px;color:var(--tx3)">${p.sku} · ${p.prov||''}</div>
+      </td>
+      <td style="text-align:center;font-weight:700;color:${(p.stock||0)>0?'var(--vdtx)':'var(--tx3)'};padding:5px 8px">${p.stock||0} ${p.und||''}</td>
+      <td style="padding:5px 8px">
+        <input type="number" min="0" max="${p.stock||999}" value="0"
+          style="width:65px;text-align:center;padding:4px;border-radius:6px;border:1px solid var(--border);background:var(--bg-input);color:var(--tx)"
+          id="pq-${p.sku}">
+      </td>
+    </tr>`).join('');
+
+  const m = document.createElement('div');
   m.className='overlay open'; m.id='modal-nuevo-pedido';
-  m.innerHTML=`<div class="modal" style="max-width:600px" onclick="event.stopPropagation()">
-    <div class="modal-header"><h3>📬 Nuevo Pedido a Bodega</h3><button class="btn-close" onclick="cerrarModalPedido()">✕</button></div>
+  m.innerHTML=`<div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📬 Nuevo Pedido a Bodega</h3>
+      <button class="btn-close" onclick="cerrarModalPedido()">✕</button>
+    </div>
     <div class="modal-body">
-      <div class="tw" style="max-height:320px;overflow-y:auto"><table>
-        <thead><tr><th>Producto</th><th>Stock Bodega</th><th>Cantidad</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <input id="ped-search" placeholder="🔍 Buscar producto o proveedor..."
+          oninput="_filtPedido(this.value)"
+          style="flex:1;padding:7px 12px;border-radius:8px;border:1px solid var(--border);
+            background:var(--bg-input);color:var(--tx);font-size:13px">
+        <label style="font-size:12px;color:var(--tx2);white-space:nowrap;display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="ped-solo-stock" onchange="_filtPedido(document.getElementById('ped-search').value)" checked>
+          Solo con stock
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:8px">
+        Mostrando productos ordenados por mayor stock disponible
+      </div>
+      <div style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+        <table style="width:100%">
+          <thead style="position:sticky;top:0;background:var(--bg-input)">
+            <tr>
+              <th style="padding:7px 10px;text-align:left;font-size:12px">Producto</th>
+              <th style="padding:7px 10px;text-align:center;font-size:12px">Stock Bodega</th>
+              <th style="padding:7px 10px;text-align:center;font-size:12px">Cantidad</th>
+            </tr>
+          </thead>
+          <tbody id="ped-modal-tbody">
+            ${buildRows(window._bInvAll)}
+          </tbody>
+        </table>
+      </div>
       <div style="margin-top:12px">
         <label style="font-size:12px;color:var(--tx2)">Notas para Bodega</label>
-        <textarea id="ped-notas" rows="2" style="width:100%;margin-top:4px" placeholder="Urgencia, observaciones..."></textarea>
+        <textarea id="ped-notas" rows="2"
+          style="width:100%;margin-top:4px;padding:8px;border-radius:8px;
+            border:1px solid var(--border);background:var(--bg-input);color:var(--tx)"
+          placeholder="Urgencia, observaciones..."></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -3039,6 +3083,24 @@ async function abrirModalNuevoPedido(){
   </div>`;
   m.onclick=e=>{if(e.target===m)cerrarModalPedido();};
   document.body.appendChild(m);
+  // Focus search
+  setTimeout(()=>document.getElementById('ped-search')?.focus(), 100);
+}
+
+function _filtPedido(q){
+  const soloStock = document.getElementById('ped-solo-stock')?.checked;
+  const query = (q||'').toLowerCase();
+  const rows = document.querySelectorAll('#ped-modal-tbody tr');
+  rows.forEach(r=>{
+    const nom = r.dataset.nom||'';
+    const prov = r.dataset.prov||'';
+    const sku = r.dataset.sku||'';
+    const matchQ = !query || nom.includes(query) || prov.includes(query) || sku.toLowerCase().includes(query);
+    const stockEl = r.querySelector('td:nth-child(2)');
+    const stock = parseInt(stockEl?.textContent)||0;
+    const matchStock = !soloStock || stock>0;
+    r.style.display = (matchQ && matchStock)?'':'none';
+  });
 }
 async function cerrarModalPedido(){
   const m=document.getElementById('modal-nuevo-pedido');
@@ -4269,12 +4331,25 @@ async function dbGetAllRaw(colPath){
 // ── DOMContentLoaded ──────────────────────────────────────
 window.addEventListener('DOMContentLoaded', ()=>{
   sessionStorage.removeItem('ep_sucursal');
-  // Ensure loading screen is hidden and selector is visible
   const ls = document.getElementById('loading-screen');
   const ss = document.getElementById('sel-screen');
   if(ls) ls.style.display = 'none';
   if(ss){ ss.classList.remove('hidden'); ss.style.display = 'flex'; }
+  // Allow physical keyboard for PIN input
+  document.addEventListener('keydown', e=>{
+    const pinWrap = document.getElementById('sel-pin-wrap');
+    if(!pinWrap || pinWrap.style.display==='none') return;
+    if(e.key>='0' && e.key<='9') selPinKey(e.key);
+    else if(e.key==='Backspace') selPinKey('del');
+    else if(e.key==='Escape') selPinKey('clr');
+    else if(e.key==='Enter'){
+      // Trigger confirm if 4 digits entered
+      const dots = document.querySelectorAll('.pin-dot.active');
+      if(dots.length===4) document.querySelector('.btn-pin-ok')?.click();
+    }
+  });
 });
+
 
 
 
