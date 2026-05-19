@@ -58,7 +58,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   --azbg:#dbeafe;--aztx:#1e40af;
   --nrbg:#ffedd5;--nrtx:#9a3412;
 }
-html,body{height:100%;overflow:hidden;font-family:'Barlow',sans-serif;background:var(--bg-page);color:var(--tx);transition:background .2s,color .2s}
+html,body{height:100%;overflow:hidden;font-family:'Nunito Sans',sans-serif;background:var(--bg-page);color:var(--tx);transition:background .2s,color .2s}
 #app{display:flex;height:100vh;overflow:hidden}
 
 /* SIDEBAR */
@@ -83,7 +83,7 @@ html,body{height:100%;overflow:hidden;font-family:'Barlow',sans-serif;background
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;height:100vh}
 .topbar{background:var(--bg-sidebar);border-bottom:1px solid var(--border);padding:0 22px;height:56px;display:flex;align-items:center;gap:14px;flex-shrink:0}
 .topbar-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;flex:1}
-.topbar-search{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--tx);width:240px;font-family:'Barlow',sans-serif}
+.topbar-search{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--tx);width:240px;font-family:'Nunito Sans',sans-serif}
 .topbar-search::placeholder{color:var(--tx3)}
 .topbar-search:focus{outline:none;border-color:var(--am)}
 .topbar-date{font-size:12px;color:var(--tx3);white-space:nowrap}
@@ -91,7 +91,7 @@ html,body{height:100%;overflow:hidden;font-family:'Barlow',sans-serif;background
 .theme-btn:hover{border-color:var(--am);color:var(--am)}
 
 /* BOTONES */
-.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Barlow',sans-serif;transition:all .15s;white-space:nowrap}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:'Nunito Sans',sans-serif;transition:all .15s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .btn-primary{background:var(--am);color:#111}
 .btn-primary:hover{background:var(--am2)}
@@ -161,7 +161,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .section-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
 .section-header h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px}
 .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.toolbar input,.toolbar select{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 13px;font-size:13px;color:var(--tx);font-family:'Barlow',sans-serif}
+.toolbar input,.toolbar select{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:8px 13px;font-size:13px;color:var(--tx);font-family:'Nunito Sans',sans-serif}
 .toolbar input::placeholder{color:var(--tx3)}
 .toolbar input:focus,.toolbar select:focus{outline:none;border-color:var(--am)}
 .toolbar select option{background:var(--bg-card)}
@@ -183,7 +183,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .fg{display:flex;flex-direction:column;gap:5px}
 .fg.full{grid-column:1/-1}
 .fg label{font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
-.fg input,.fg select,.fg textarea{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Barlow',sans-serif}
+.fg input,.fg select,.fg textarea{background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Nunito Sans',sans-serif}
 .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--am)}
 .fg select option{background:var(--bg-input)}
 .fg textarea{resize:vertical;min-height:70px}
@@ -198,7 +198,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 
 /* ITEMS VENTA */
 .irow{display:grid;grid-template-columns:1fr 70px 100px 90px 30px;gap:6px;align-items:center;margin-bottom:7px}
-.irow input{background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:6px 9px;width:100%;font-size:12.5px;color:var(--tx);font-family:'Barlow',sans-serif}
+.irow input{background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:6px 9px;width:100%;font-size:12.5px;color:var(--tx);font-family:'Nunito Sans',sans-serif}
 .irow input:focus{outline:none;border-color:var(--am)}
 .prod-suggest{position:relative}
 .prod-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;z-index:500;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)}
@@ -215,7 +215,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 
 /* FAVORITOS */
 .favs-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;padding:10px;background:var(--bg-sidebar);border-radius:8px;border:1px solid var(--border)}
-.fav-btn{padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--tx2);font-family:'Barlow',sans-serif;transition:all .15s;text-align:left}
+.fav-btn{padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--tx2);font-family:'Nunito Sans',sans-serif;transition:all .15s;text-align:left}
 .fav-btn:hover{border-color:var(--am);color:var(--am)}
 .fav-btn .fav-price{display:block;font-size:10px;color:var(--am);margin-top:1px}
 
@@ -226,7 +226,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 
 /* TABS */
 .tabnav{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px}
-.tabbtn{padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--tx2);border-bottom:2px solid transparent;transition:all .15s;font-family:'Barlow',sans-serif}
+.tabbtn{padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--tx2);border-bottom:2px solid transparent;transition:all .15s;font-family:'Nunito Sans',sans-serif}
 .tabbtn:hover{color:var(--tx)}
 .tabbtn.active{color:var(--am);border-bottom-color:var(--am)}
 .tabc{display:none}
@@ -258,7 +258,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--am);background:rgba(245,196,0,.05)}
 .upload-zone-icon{font-size:48px;margin-bottom:12px}
 .item-row-sii{display:grid;grid-template-columns:90px 1fr 80px 90px 90px 36px;gap:6px;align-items:center;margin-bottom:6px}
-.item-row-sii input,.item-row-sii select{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--tx);font-family:'Barlow',sans-serif;width:100%}
+.item-row-sii input,.item-row-sii select{background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;color:var(--tx);font-family:'Nunito Sans',sans-serif;width:100%}
 .item-row-sii input:focus,.item-row-sii select:focus{outline:none;border-color:var(--am)}
 .tag-existe{background:var(--vdbg);color:var(--vdtx);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
 .tag-nuevo{background:var(--azbg);color:var(--aztx);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
@@ -277,7 +277,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .pedido-items-preview{font-size:12px;color:var(--tx2);line-height:1.7}
 .pedido-notas-preview{font-size:12px;color:var(--tx3);font-style:italic;padding:6px 10px;background:var(--bg-input);border-radius:6px;border-left:3px solid var(--am)}
 .pedido-footer{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.estado-select{background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);font-family:'Barlow',sans-serif;cursor:pointer;transition:border-color .2s}
+.estado-select{background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--tx);font-family:'Nunito Sans',sans-serif;cursor:pointer;transition:border-color .2s}
 .estado-select:focus{outline:none;border-color:var(--am)}
 .item-check-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:5px;border:1px solid var(--border);background:var(--bg-input);transition:all .15s}
 .item-check-row.reunido{background:var(--vdbg);border-color:var(--vd)}
@@ -298,7 +298,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   .page{display:block!important}
   .card{break-inside:avoid}
 }
-.print-doc{font-family:'Barlow',sans-serif;max-width:680px;margin:0 auto;padding:20px}
+.print-doc{font-family:'Nunito Sans',sans-serif;max-width:680px;margin:0 auto;padding:20px}
 .print-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid var(--am)}
 .print-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--am)}
 .print-table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
@@ -307,7 +307,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
 .print-total{font-size:20px;font-weight:700;color:var(--am);font-family:'Barlow Condensed',sans-serif}
 
 /* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;padding:13px 22px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:9999;display:none;color:#fff;font-family:'Barlow',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+#toast{position:fixed;bottom:24px;right:24px;padding:13px 22px;border-radius:10px;font-size:13.5px;font-weight:600;z-index:9999;display:none;color:#fff;font-family:'Nunito Sans',sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.4)}
 @keyframes tIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 /* SCROLLBAR */
@@ -325,6 +325,10 @@ tr:hover td{background:rgba(245,196,0,.04)}
 /* Force selector visible on load — JS will hide it after sucursal chosen */
 #sel-screen { display: flex !important; }
 #sel-screen.hidden { display: none !important; }
+
+.logo-text,.logo-sub,.nav-section,.section-header h2,.card-title,.kpi-val,.modal-header h3,
+.topbar-title,.sel-logo,.pin-key,.loading-logo,.sel-btn-name,th,
+h1,h2,h3,h4{font-family:'Outfit',sans-serif!important}
 </style>
 
 </head>
@@ -340,16 +344,16 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:700;letter-spacing:1px;color:var(--tx)">ELECTRICIDAD PALAVECINO</div>
   <div style="font-size:14px;color:var(--tx2);margin-bottom:8px">Selecciona tu sucursal para continuar</div>
   <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
-    <button onclick="pedirPinSucursal('s1')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--am);color:var(--neg);border:none;border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+    <button onclick="pedirPinSucursal('s1')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--am);color:var(--neg);border:none;border-radius:12px;cursor:pointer;font-family:'Nunito Sans',sans-serif;min-width:200px">
       🏪 Casa Matriz<br><small style="font-size:12px;font-weight:400">Antonio Varas 1117</small>
     </button>
-    <button onclick="pedirPinSucursal('s2')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+    <button onclick="pedirPinSucursal('s2')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Nunito Sans',sans-serif;min-width:200px">
       🏪 Sucursal<br><small style="font-size:12px;font-weight:400">Los Muermos</small>
     </button>
-    <button onclick="pedirPinSucursal('bodega')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+    <button onclick="pedirPinSucursal('bodega')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--tx);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-family:'Nunito Sans',sans-serif;min-width:200px">
       🏭 Bodega General
     </button>
-    <button onclick="pedirPinSucursal('admin')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--am);border:2px solid var(--am);border-radius:12px;cursor:pointer;font-family:'Barlow',sans-serif;min-width:200px">
+    <button onclick="pedirPinSucursal('admin')" style="padding:22px 40px;font-size:16px;font-weight:700;background:var(--bg-card);color:var(--am);border:2px solid var(--am);border-radius:12px;cursor:pointer;font-family:'Nunito Sans',sans-serif;min-width:200px">
       🔑 Administrador
     </button>
   </div>
@@ -398,34 +402,41 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <nav>
     <div class="nav-section">Principal</div>
     <div class="nav-item active" onclick="goTo('dashboard',this)"><span class="nav-icon">📊</span><span>Dashboard</span></div>
-    <div class="nav-section">Módulos</div>
+
+    <div class="nav-section" id="nsc-clientes" style="display:none">Clientes</div>
     <div class="nav-item" id="nav-clientes" style="display:none" onclick="goTo('clientes',this)"><span class="nav-icon">👥</span><span>Clientes</span></div>
-    <div class="nav-item" id="nav-proveedores" style="display:none" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
-    <div class="nav-item" id="nav-inventario" style="display:none" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span id="nav-inv-label">Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
-    <div class="nav-item" id="nav-ventas" style="display:none" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
-    <div class="nav-item" id="nav-cotizaciones" style="display:none" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
-    <div class="nav-item" id="nav-pedidos" style="display:none" onclick="goTo('pedidos',this)"><span class="nav-icon">📬</span><span id="nav-ped-label">Pedidos</span><span class="badge-nav" id="badge-pedidos">0</span></div>
-    <div class="nav-item" id="nav-compras" style="display:none" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
-    <div class="nav-item" id="nav-caja" style="display:none" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
-    <div class="nav-item" id="nav-stock-suc" style="display:none" onclick="goTo('stock_suc',this)"><span class="nav-icon">📊</span><span>Stock Sucursales</span></div>
-    <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
-    <!-- Admin-only modules -->
-    <div class="nav-item" id="nav-reportes" style="display:none" onclick="goTo('reportes',this)"><span class="nav-icon">📈</span><span>Reportes</span></div>
-    <div class="nav-item" id="nav-caja-admin" style="display:none" onclick="goTo('caja_admin',this)"><span class="nav-icon">💳</span><span>Caja Sucursales</span></div>
-    <div class="nav-item" id="nav-alertas" style="display:none" onclick="goTo('alertas',this)"><span class="nav-icon">🔔</span><span>Alertas</span><span class="badge-nav" id="badge-alertas"></span></div>
-    <div class="nav-item" id="nav-inv-sucursales" style="display:none" onclick="goTo('inv_sucursales',this)"><span class="nav-icon">🏪</span><span>Inventario Sucursales</span></div>
     <div class="nav-item" id="nav-clientes-suc" style="display:none" onclick="goTo('clientes_suc',this)"><span class="nav-icon">👥</span><span>Clientes Sucursales</span></div>
-    <!-- Módulos S1+S2 -->
+    <div class="nav-item" id="nav-proveedores" style="display:none" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
+
+    <div class="nav-section" id="nsc-ventas" style="display:none">Ventas</div>
+    <div class="nav-item" id="nav-ventas" style="display:none" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
+    <div class="nav-item" id="nav-cotizaciones" style="display:none" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotización Formal</span></div>
+    <div class="nav-item" id="nav-lista-precios" style="display:none" onclick="goTo('lista_precios',this)"><span class="nav-icon">💲</span><span>Cotización Rápida</span></div>
     <div class="nav-item" id="nav-pedidos-local" style="display:none" onclick="goTo('pedidos_local',this)"><span class="nav-icon">📋</span><span>Pedidos en Preparación</span><span class="badge-nav" id="badge-ped-local"></span></div>
-    <div class="nav-item" id="nav-lista-precios" style="display:none" onclick="goTo('lista_precios',this)"><span class="nav-icon">💲</span><span>Lista de Precios</span></div>
     <div class="nav-item" id="nav-devoluciones" style="display:none" onclick="goTo('devoluciones',this)"><span class="nav-icon">🔄</span><span>Devoluciones</span></div>
+
+    <div class="nav-section" id="nsc-inventario" style="display:none">Inventario</div>
+    <div class="nav-item" id="nav-inventario" style="display:none" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span id="nav-inv-label">Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
+    <div class="nav-item" id="nav-inv-sucursales" style="display:none" onclick="goTo('inv_sucursales',this)"><span class="nav-icon">🏪</span><span>Inventario Sucursales</span></div>
+    <div class="nav-item" id="nav-pedidos" style="display:none" onclick="goTo('pedidos',this)"><span class="nav-icon">📬</span><span id="nav-ped-label">Pedidos</span><span class="badge-nav" id="badge-pedidos">0</span></div>
+    <div class="nav-item" id="nav-stock-suc" style="display:none" onclick="goTo('stock_suc',this)"><span class="nav-icon">📊</span><span>Stock Sucursales</span></div>
+    <div class="nav-item" id="nav-kits" style="display:none" onclick="goTo('kits',this)"><span class="nav-icon">📦</span><span>Kits / Combos</span></div>
+
+    <div class="nav-section" id="nsc-operaciones" style="display:none">Operaciones</div>
+    <div class="nav-item" id="nav-compras" style="display:none" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
     <div class="nav-item" id="nav-garantias" style="display:none" onclick="goTo('garantias',this)"><span class="nav-icon">🛡️</span><span>Garantías</span></div>
     <div class="nav-item" id="nav-despachos" style="display:none" onclick="goTo('despachos',this)"><span class="nav-icon">🚛</span><span>Despachos</span></div>
-    <div class="nav-item" id="nav-kits" style="display:none" onclick="goTo('kits',this)"><span class="nav-icon">📦</span><span>Kits / Combos</span></div>
-    <!-- Admin vistas -->
     <div class="nav-item" id="nav-dev-suc" style="display:none" onclick="goTo('dev_suc',this)"><span class="nav-icon">🔄</span><span>Devoluciones Sucursales</span></div>
     <div class="nav-item" id="nav-gar-suc" style="display:none" onclick="goTo('gar_suc',this)"><span class="nav-icon">🛡️</span><span>Garantías Sucursales</span></div>
     <div class="nav-item" id="nav-des-suc" style="display:none" onclick="goTo('des_suc',this)"><span class="nav-icon">🚛</span><span>Despachos Sucursales</span></div>
+
+    <div class="nav-section" id="nsc-reportes" style="display:none">Reportes</div>
+    <div class="nav-item" id="nav-caja" style="display:none" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
+    <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
+    <div class="nav-item" id="nav-reportes" style="display:none" onclick="goTo('reportes',this)"><span class="nav-icon">📈</span><span>Reportes</span></div>
+    <div class="nav-item" id="nav-caja-admin" style="display:none" onclick="goTo('caja_admin',this)"><span class="nav-icon">💳</span><span>Caja Sucursales</span></div>
+    <div class="nav-item" id="nav-alertas" style="display:none" onclick="goTo('alertas',this)"><span class="nav-icon">🔔</span><span>Alertas</span><span class="badge-nav" id="badge-alertas"></span></div>
+
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
     <div class="nav-item" onclick="pedirAccesoConfig(this)"><span class="nav-icon">⚙️</span><span>Configuración</span></div>
@@ -962,7 +973,7 @@ tr:hover td{background:rgba(245,196,0,.04)}
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">
     <div class="fg">
       <label style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.6px">Estado General</label>
-      <select id="ped-estado" onchange="actualizarEstadoPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Barlow',sans-serif;min-width:220px">
+      <select id="ped-estado" onchange="actualizarEstadoPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Nunito Sans',sans-serif;min-width:220px">
         <option>Pendiente</option>
         <option>En preparación</option>
         <option>Listo para entrega</option>
@@ -972,14 +983,14 @@ tr:hover td{background:rgba(245,196,0,.04)}
     </div>
     <div class="fg">
       <label style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.6px">Fecha de entrega comprometida</label>
-      <input type="date" id="ped-fecha-entrega" onchange="guardarCamposPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Barlow',sans-serif">
+      <input type="date" id="ped-fecha-entrega" onchange="guardarCamposPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Nunito Sans',sans-serif">
     </div>
   </div>
   <div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px">📦 Lista de Materiales</div>
   <div id="ped-items-lista"></div>
   <div style="margin-top:14px">
     <label style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:5px">Notas Internas</label>
-    <textarea id="ped-notas" rows="2" placeholder="Ej: Cable pendiente de proveedor, llamar al cliente..." onchange="guardarCamposPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Barlow',sans-serif;resize:vertical;width:100%"></textarea>
+    <textarea id="ped-notas" rows="2" placeholder="Ej: Cable pendiente de proveedor, llamar al cliente..." onchange="guardarCamposPedido()" style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--tx);font-family:'Nunito Sans',sans-serif;resize:vertical;width:100%"></textarea>
   </div>
   <div class="mfoot">
     <button class="btn btn-secondary" onclick="closeModal('modal-pedido')">Cerrar</button>
@@ -1290,6 +1301,9 @@ async function fbDeleteCollection(colPath){
 
 
 
+
+
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -1533,7 +1547,7 @@ function goTo(page,el){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema',inv_sucursales:'Inventario Sucursales',clientes_suc:'Clientes por Sucursal',pedidos_local:'Pedidos de Local en Preparación',lista_precios:'Lista de Precios',devoluciones:'Devoluciones / Notas de Crédito',garantias:'Control de Garantías',despachos:'Control de Despachos',kits:'Kits / Combos',dev_suc:'Devoluciones Sucursales',gar_suc:'Garantías Sucursales',des_suc:'Despachos Sucursales'};
+  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema',inv_sucursales:'Inventario Sucursales',clientes_suc:'Clientes por Sucursal',pedidos_local:'Pedidos de Local en Preparación',lista_precios:'Cotización Rápida',devoluciones:'Devoluciones / Notas de Crédito',garantias:'Control de Garantías',despachos:'Control de Despachos',kits:'Kits / Combos',dev_suc:'Devoluciones Sucursales',gar_suc:'Garantías Sucursales',des_suc:'Despachos Sucursales'};
   document.getElementById('page-title').textContent=(tits[page]||page)+' — '+(SUC_NOMBRES[SUC]||SUC);
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
@@ -1602,7 +1616,19 @@ async function pedirPinSucursal(suc){
   wrap.style.display = 'flex';
 }
 
-async function seleccionarSucursal(suc){
+function _showNavSections(suc){
+  const all=['nsc-clientes','nsc-ventas','nsc-inventario','nsc-operaciones','nsc-reportes'];
+  all.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  const show=ids=>ids.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
+  if(suc==='s1'||suc==='s2'){
+    show(['nsc-clientes','nsc-ventas','nsc-inventario','nsc-operaciones','nsc-reportes']);
+  } else if(suc==='bodega'){
+    show(['nsc-inventario','nsc-operaciones']);
+  } else if(suc==='admin'){
+    show(['nsc-clientes','nsc-inventario','nsc-operaciones','nsc-reportes']);
+  }
+}
+function seleccionarSucursal(suc){
   SUC=suc; sessionStorage.setItem('ep_sucursal',suc);
   const sb=document.getElementById('suc-badge');
   if(sb){
@@ -1622,17 +1648,17 @@ async function seleccionarSucursal(suc){
   const pl=document.getElementById('nav-ped-label');
   if(suc==='s1'){
     ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(show);
-    if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega';
+    if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega'; _showNavSections('s1');
   }else if(suc==='s2'){
     ['nav-clientes','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(show);
-    if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega';
+    if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega'; _showNavSections('s2');
   }else if(suc==='bodega'){
     ['nav-proveedores','nav-inventario','nav-pedidos','nav-stock-suc','nav-despachos'].forEach(show);
-    if(il)il.textContent='Inventario Bodega'; if(pl)pl.textContent='Pedidos Recibidos';
+    if(il)il.textContent='Inventario Bodega'; if(pl)pl.textContent='Pedidos Recibidos'; _showNavSections('bodega');
   }else if(suc==='admin'){
     // Admin sees everything in read-only + admin-specific modules
     ['nav-proveedores','nav-inventario','nav-consolidado','nav-reportes','nav-caja-admin','nav-alertas','nav-clientes-suc','nav-inv-sucursales','nav-dev-suc','nav-gar-suc','nav-des-suc'].forEach(show);
-    if(il)il.textContent='Inventario Global';
+    if(il)il.textContent='Inventario Global'; _showNavSections('admin');
   }
   document.getElementById('sel-screen').classList.add('hidden');
   document.getElementById('loading-screen').style.display='flex';
@@ -6372,16 +6398,16 @@ async function continuarInit(){
   const _pl = document.getElementById('nav-ped-label');
   if(SUC==='s1'){
     ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(_show);
-    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega';
+    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega'; _showNavSections('s1');
   } else if(SUC==='s2'){
     ['nav-clientes','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(_show);
-    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega';
+    if(_il) _il.textContent='Mi Inventario'; if(_pl) _pl.textContent='Pedidos a Bodega'; _showNavSections('s2');
   } else if(SUC==='bodega'){
     ['nav-proveedores','nav-inventario','nav-pedidos','nav-stock-suc','nav-despachos'].forEach(_show);
-    if(_il) _il.textContent='Inventario Bodega'; if(_pl) _pl.textContent='Pedidos Recibidos';
+    if(_il) _il.textContent='Inventario Bodega'; if(_pl) _pl.textContent='Pedidos Recibidos'; _showNavSections('bodega');
   } else if(SUC==='admin'){
     ['nav-proveedores','nav-inventario','nav-consolidado','nav-reportes','nav-caja-admin','nav-alertas','nav-clientes-suc','nav-inv-sucursales','nav-dev-suc','nav-gar-suc','nav-des-suc'].forEach(_show);
-    if(_il) _il.textContent='Inventario Global';
+    if(_il) _il.textContent='Inventario Global'; _showNavSections('admin');
   }
     try{
     setMsg('Conectando...');
@@ -6568,6 +6594,9 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 });
+
+
+
 
 
 
