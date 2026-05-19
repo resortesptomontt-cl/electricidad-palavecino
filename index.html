@@ -396,36 +396,50 @@ tr:hover td{background:rgba(245,196,0,.04)}
   </div>
   <div class="db-status db-ok" id="db-status-badge">💾 Base de datos activa</div>
   <nav>
+    <!-- PRINCIPAL -->
     <div class="nav-section">Principal</div>
     <div class="nav-item active" onclick="goTo('dashboard',this)"><span class="nav-icon">📊</span><span>Dashboard</span></div>
-    <div class="nav-section">Módulos</div>
+
+    <!-- CLIENTES Y PROVEEDORES -->
+    <div class="nav-section nav-sec-clientes" style="display:none">Clientes</div>
     <div class="nav-item" id="nav-clientes" style="display:none" onclick="goTo('clientes',this)"><span class="nav-icon">👥</span><span>Clientes</span></div>
+    <div class="nav-item" id="nav-clientes-suc" style="display:none" onclick="goTo('clientes_suc',this)"><span class="nav-icon">👥</span><span>Clientes Sucursales</span></div>
     <div class="nav-item" id="nav-proveedores" style="display:none" onclick="goTo('proveedores',this)"><span class="nav-icon">🏭</span><span>Proveedores</span></div>
-    <div class="nav-item" id="nav-inventario" style="display:none" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span id="nav-inv-label">Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
+
+    <!-- VENTAS -->
+    <div class="nav-section nav-sec-ventas" style="display:none">Ventas</div>
     <div class="nav-item" id="nav-ventas" style="display:none" onclick="goTo('ventas',this)"><span class="nav-icon">🧾</span><span>Ventas</span></div>
-    <div class="nav-item" id="nav-cotizaciones" style="display:none" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotizaciones</span></div>
+    <div class="nav-item" id="nav-cotizaciones" style="display:none" onclick="goTo('cotizaciones',this)"><span class="nav-icon">📋</span><span>Cotización Formal</span></div>
+    <div class="nav-item" id="nav-lista-precios" style="display:none" onclick="goTo('lista_precios',this)"><span class="nav-icon">💲</span><span>Cotización Rápida</span></div>
+    <div class="nav-item" id="nav-pedidos-local" style="display:none" onclick="goTo('pedidos_local',this)"><span class="nav-icon">📋</span><span>Pedidos en Preparación</span><span class="badge-nav" id="badge-ped-local"></span></div>
+    <div class="nav-item" id="nav-devoluciones" style="display:none" onclick="goTo('devoluciones',this)"><span class="nav-icon">🔄</span><span>Devoluciones</span></div>
+
+    <!-- INVENTARIO -->
+    <div class="nav-section nav-sec-inventario" style="display:none">Inventario</div>
+    <div class="nav-item" id="nav-inventario" style="display:none" onclick="goTo('inventario',this)"><span class="nav-icon">📦</span><span id="nav-inv-label">Inventario</span><span class="badge-nav" id="badge-stock">0</span></div>
+    <div class="nav-item" id="nav-inv-sucursales" style="display:none" onclick="goTo('inv_sucursales',this)"><span class="nav-icon">🏪</span><span>Inventario Sucursales</span></div>
     <div class="nav-item" id="nav-pedidos" style="display:none" onclick="goTo('pedidos',this)"><span class="nav-icon">📬</span><span id="nav-ped-label">Pedidos</span><span class="badge-nav" id="badge-pedidos">0</span></div>
-    <div class="nav-item" id="nav-compras" style="display:none" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
-    <div class="nav-item" id="nav-caja" style="display:none" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-item" id="nav-stock-suc" style="display:none" onclick="goTo('stock_suc',this)"><span class="nav-icon">📊</span><span>Stock Sucursales</span></div>
+    <div class="nav-item" id="nav-kits" style="display:none" onclick="goTo('kits',this)"><span class="nav-icon">📦</span><span>Kits / Combos</span></div>
+
+    <!-- OPERACIONES -->
+    <div class="nav-section nav-sec-operaciones" style="display:none">Operaciones</div>
+    <div class="nav-item" id="nav-compras" style="display:none" onclick="goTo('compras',this)"><span class="nav-icon">📥</span><span>Compras / Facturas</span><span class="badge-nav" id="badge-compras" style="background:var(--vd)">0</span></div>
+    <div class="nav-item" id="nav-garantias" style="display:none" onclick="goTo('garantias',this)"><span class="nav-icon">🛡️</span><span>Garantías</span></div>
+    <div class="nav-item" id="nav-despachos" style="display:none" onclick="goTo('despachos',this)"><span class="nav-icon">🚛</span><span>Despachos</span></div>
+    <div class="nav-item" id="nav-gar-suc" style="display:none" onclick="goTo('gar_suc',this)"><span class="nav-icon">🛡️</span><span>Garantías Sucursales</span></div>
+    <div class="nav-item" id="nav-dev-suc" style="display:none" onclick="goTo('dev_suc',this)"><span class="nav-icon">🔄</span><span>Devoluciones Sucursales</span></div>
+    <div class="nav-item" id="nav-des-suc" style="display:none" onclick="goTo('des_suc',this)"><span class="nav-icon">🚛</span><span>Despachos Sucursales</span></div>
+
+    <!-- REPORTES Y CAJA -->
+    <div class="nav-section nav-sec-reportes" style="display:none">Reportes</div>
+    <div class="nav-item" id="nav-caja" style="display:none" onclick="goTo('caja',this)"><span class="nav-icon">💰</span><span>Caja Diaria</span></div>
     <div class="nav-item" id="nav-consolidado" style="display:none" onclick="goTo('consolidado',this)"><span class="nav-icon">🏢</span><span>Vista Consolidada</span></div>
-    <!-- Admin-only modules -->
     <div class="nav-item" id="nav-reportes" style="display:none" onclick="goTo('reportes',this)"><span class="nav-icon">📈</span><span>Reportes</span></div>
     <div class="nav-item" id="nav-caja-admin" style="display:none" onclick="goTo('caja_admin',this)"><span class="nav-icon">💳</span><span>Caja Sucursales</span></div>
     <div class="nav-item" id="nav-alertas" style="display:none" onclick="goTo('alertas',this)"><span class="nav-icon">🔔</span><span>Alertas</span><span class="badge-nav" id="badge-alertas"></span></div>
-    <div class="nav-item" id="nav-inv-sucursales" style="display:none" onclick="goTo('inv_sucursales',this)"><span class="nav-icon">🏪</span><span>Inventario Sucursales</span></div>
-    <div class="nav-item" id="nav-clientes-suc" style="display:none" onclick="goTo('clientes_suc',this)"><span class="nav-icon">👥</span><span>Clientes Sucursales</span></div>
-    <!-- Módulos S1+S2 -->
-    <div class="nav-item" id="nav-pedidos-local" style="display:none" onclick="goTo('pedidos_local',this)"><span class="nav-icon">📋</span><span>Pedidos en Preparación</span><span class="badge-nav" id="badge-ped-local"></span></div>
-    <div class="nav-item" id="nav-lista-precios" style="display:none" onclick="goTo('lista_precios',this)"><span class="nav-icon">💲</span><span>Lista de Precios</span></div>
-    <div class="nav-item" id="nav-devoluciones" style="display:none" onclick="goTo('devoluciones',this)"><span class="nav-icon">🔄</span><span>Devoluciones</span></div>
-    <div class="nav-item" id="nav-garantias" style="display:none" onclick="goTo('garantias',this)"><span class="nav-icon">🛡️</span><span>Garantías</span></div>
-    <div class="nav-item" id="nav-despachos" style="display:none" onclick="goTo('despachos',this)"><span class="nav-icon">🚛</span><span>Despachos</span></div>
-    <div class="nav-item" id="nav-kits" style="display:none" onclick="goTo('kits',this)"><span class="nav-icon">📦</span><span>Kits / Combos</span></div>
-    <!-- Admin vistas -->
-    <div class="nav-item" id="nav-dev-suc" style="display:none" onclick="goTo('dev_suc',this)"><span class="nav-icon">🔄</span><span>Devoluciones Sucursales</span></div>
-    <div class="nav-item" id="nav-gar-suc" style="display:none" onclick="goTo('gar_suc',this)"><span class="nav-icon">🛡️</span><span>Garantías Sucursales</span></div>
-    <div class="nav-item" id="nav-des-suc" style="display:none" onclick="goTo('des_suc',this)"><span class="nav-icon">🚛</span><span>Despachos Sucursales</span></div>
+
+    <!-- SISTEMA -->
     <div class="nav-section">Sistema</div>
     <div class="nav-item" onclick="pedirAccesoHistorial(this)"><span class="nav-icon">📝</span><span>Historial</span></div>
     <div class="nav-item" onclick="pedirAccesoConfig(this)"><span class="nav-icon">⚙️</span><span>Configuración</span></div>
@@ -1290,6 +1304,7 @@ async function fbDeleteCollection(colPath){
 
 
 
+
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
   'Protecciones','Cajas y Canaletas','Accesorios y Fijación','Alta Tensión',
@@ -1533,7 +1548,7 @@ function goTo(page,el){
   document.getElementById('page-'+page).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotizaciones',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema',inv_sucursales:'Inventario Sucursales',clientes_suc:'Clientes por Sucursal',pedidos_local:'Pedidos de Local en Preparación',lista_precios:'Lista de Precios',devoluciones:'Devoluciones / Notas de Crédito',garantias:'Control de Garantías',despachos:'Control de Despachos',kits:'Kits / Combos',dev_suc:'Devoluciones Sucursales',gar_suc:'Garantías Sucursales',des_suc:'Despachos Sucursales'};
+  const tits={dashboard:'Dashboard',clientes:'Clientes',proveedores:'Proveedores',inventario:'Inventario',ventas:'Ventas',cotizaciones:'Cotización Formal',pedidos:'Pedidos',compras:'Compras / SII',consolidado:'Vista Consolidada',caja:'Caja Diaria',historial:'Historial',configuracion:'Configuración',stock_suc:'Stock Sucursales',reportes:'Reportes Ejecutivos',caja_admin:'Caja Sucursales',alertas:'Alertas del Sistema',inv_sucursales:'Inventario Sucursales',clientes_suc:'Clientes por Sucursal',pedidos_local:'Pedidos de Local en Preparación',lista_precios:'Cotización Rápida',devoluciones:'Devoluciones / Notas de Crédito',garantias:'Control de Garantías',despachos:'Control de Despachos',kits:'Kits / Combos',dev_suc:'Devoluciones Sucursales',gar_suc:'Garantías Sucursales',des_suc:'Despachos Sucursales'};
   document.getElementById('page-title').textContent=(tits[page]||page)+' — '+(SUC_NOMBRES[SUC]||SUC);
   document.getElementById('search-results').style.display='none';
   document.getElementById('global-search').value='';
@@ -1623,16 +1638,20 @@ async function seleccionarSucursal(suc){
   if(suc==='s1'){
     ['nav-clientes','nav-proveedores','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(show);
     if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega';
+    _showNavSections('s1');
   }else if(suc==='s2'){
     ['nav-clientes','nav-inventario','nav-ventas','nav-cotizaciones','nav-pedidos','nav-compras','nav-caja','nav-pedidos-local','nav-lista-precios','nav-devoluciones','nav-garantias','nav-despachos','nav-kits'].forEach(show);
     if(il)il.textContent='Mi Inventario'; if(pl)pl.textContent='Pedidos a Bodega';
+    _showNavSections('s2');
   }else if(suc==='bodega'){
     ['nav-proveedores','nav-inventario','nav-pedidos','nav-stock-suc','nav-despachos'].forEach(show);
     if(il)il.textContent='Inventario Bodega'; if(pl)pl.textContent='Pedidos Recibidos';
+    _showNavSections('bodega');
   }else if(suc==='admin'){
     // Admin sees everything in read-only + admin-specific modules
     ['nav-proveedores','nav-inventario','nav-consolidado','nav-reportes','nav-caja-admin','nav-alertas','nav-clientes-suc','nav-inv-sucursales','nav-dev-suc','nav-gar-suc','nav-des-suc'].forEach(show);
     if(il)il.textContent='Inventario Global';
+    _showNavSections('admin');
   }
   document.getElementById('sel-screen').classList.add('hidden');
   document.getElementById('loading-screen').style.display='flex';
@@ -6349,6 +6368,20 @@ async function eliminarKit(id){
 
 function editarKit(id){toast('Edición de kits próximamente','azul');}
 
+
+function _showNavSections(suc){
+  const all=['nav-sec-clientes','nav-sec-ventas','nav-sec-inventario','nav-sec-operaciones','nav-sec-reportes'];
+  all.forEach(id=>{ const el=document.querySelector('.'+id); if(el) el.style.display='none'; });
+  const show=ids=>ids.forEach(id=>{ const el=document.querySelector('.'+id); if(el) el.style.display=''; });
+  if(suc==='s1'||suc==='s2'){
+    show(['nav-sec-clientes','nav-sec-ventas','nav-sec-inventario','nav-sec-operaciones','nav-sec-reportes']);
+  } else if(suc==='bodega'){
+    show(['nav-sec-inventario','nav-sec-operaciones']);
+  } else if(suc==='admin'){
+    show(['nav-sec-clientes','nav-sec-inventario','nav-sec-operaciones','nav-sec-reportes']);
+  }
+}
+
 // ================================================================
 //  INICIO
 // ================================================================
@@ -6382,6 +6415,7 @@ async function continuarInit(){
   } else if(SUC==='admin'){
     ['nav-proveedores','nav-inventario','nav-consolidado','nav-reportes','nav-caja-admin','nav-alertas','nav-clientes-suc','nav-inv-sucursales','nav-dev-suc','nav-gar-suc','nav-des-suc'].forEach(_show);
     if(_il) _il.textContent='Inventario Global';
+    _showNavSections('admin');
   }
     try{
     setMsg('Conectando...');
@@ -6568,6 +6602,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
     }
   });
 });
+
 
 
 
