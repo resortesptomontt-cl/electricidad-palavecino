@@ -850,6 +850,9 @@ tr:hover td{background:rgba(245,196,0,.04)}
     <div class="fg full"><label>Dirección</label><input id="prov-dir" placeholder="Dirección del proveedor"></div>
   </div>
   <div class="mfoot">
+    <div class="fg full" style="grid-column:1/-1"><label>Observaciones</label><textarea id="prov-obs" rows="2" placeholder="Días de entrega, condiciones de pago..."></textarea></div>
+</div>
+<div class="modal-footer">
     <button class="btn btn-secondary" onclick="closeModal('modal-proveedor')">Cancelar</button>
     <button class="btn btn-primary" onclick="guardarProveedor()">Guardar</button>
   </div>
@@ -1166,6 +1169,7 @@ T).classList.remove('hidden');
 
 <script>
 
+
 // ════════════════════════════════════════════════════════════════
 //  FIREBASE LAYER — SDK compat v9.23.0
 //  Todas las funciones son async y usan await correctamente
@@ -1276,35 +1280,8 @@ async function fbGetCollection(colPath){
   return snap.docs.map(d => ({...d.data(), id: d.id}));
 }
 
-async function fbDeleteCollection(colPath){
-  const snap = await DB.collection(colPath).get();
-  if(snap.empty) return;
-  const batch = DB.batch();
-  snap.docs.forEach(d => batch.delete(d.ref));
-  await batch.commit();
-}
-
 </script>
 <script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ── Categorías dinámicas ──────────────────────────────────
 const CATS_DEFAULT=['Cables','Iluminación','Tableros','Enchufes','Herramientas',
@@ -1820,28 +1797,8 @@ async function delCliente(id){
 // ================================================================
 //  PROVEEDORES
 // ================================================================
-async function openModalProveedor(id=null){
-  document.getElementById('tit-prov').textContent=id?'Editar Proveedor':'Nuevo Proveedor';
-  document.getElementById('prov-id').value=id||'';
-  const p=id?MEM.proveedores.find(x=>x.id===id):null;
-  ['rut','empresa','contacto','tel','email','prod','dir'].forEach(f=>document.getElementById('prov-'+f).value=p?p[f]||'':'');
-  document.getElementById('prov-cond').value=p?p.cond:'Contado';
-  document.getElementById('modal-proveedor').classList.add('open');
-}
-async function guardarProveedor(){
-  if(!adminGuard()) return;
-  const empresa=document.getElementById('prov-empresa').value.trim();
-  if(!empresa){ toast('Nombre de empresa requerido','rojo'); return; }
-  const obj={rut:document.getElementById('prov-rut').value.trim(),empresa,contacto:document.getElementById('prov-contacto').value.trim(),tel:document.getElementById('prov-tel').value.trim(),email:document.getElementById('prov-email').value.trim(),cond:document.getElementById('prov-cond').value,ultima:today(),prod:document.getElementById('prov-prod').value.trim(),dir:document.getElementById('prov-dir').value.trim()};
-  const id=document.getElementById('prov-id').value||null;
-  const accion=id?'Editar':'Nuevo';
-  if(id){ obj.id=id; await dbPut('proveedores',obj); }
-  else await dbAdd('proveedores',obj);
-  MEM.proveedores=await dbGetAll('proveedores');
-  await logAction('Proveedor',accion,empresa);
-  closeModal('modal-proveedor'); renderProveedores();
-  toast(id?'Proveedor actualizado ✅':'Proveedor registrado ✅');
-}
+
+
 
 async function delProv(id){
   const p=MEM.proveedores.find(x=>x.id===id);
@@ -6375,6 +6332,21 @@ function _invTab(tab){
     if(pc) pc.style.display='none';
   }
 }
+
+function editarProductoRapido(sku){
+  var p=(MEM.inventario||[]).find(function(x){return x.sku===sku;});
+  if(!p){toast('Producto no encontrado','rojo');return;}
+  // Use existing edit modal
+  if(typeof openModalProducto==='function') openModalProducto(p.id||sku);
+  else if(typeof abrirEditarProducto==='function') abrirEditarProducto(p.id||sku);
+  else{
+    // Fallback: navigate to inventario and open edit
+    goTo('inventario',document.getElementById('nav-inventario'));
+    setTimeout(function(){
+      if(typeof openModalProducto==='function') openModalProducto(p.id||sku);
+    },300);
+  }
+}
 function renderInventarioPorProveedor(filtro){
   filtro=filtro||'';
   var cont=document.getElementById('inv-prov-cont'); if(!cont) return;
@@ -6410,6 +6382,7 @@ function renderInventarioPorProveedor(filtro){
       +'<th style="padding:6px 12px">SKU</th><th style="padding:6px 12px">Producto</th>'
       +'<th style="padding:6px 12px;text-align:center">Stock</th><th style="padding:6px 12px;text-align:center">Mín</th>'
       +'<th style="padding:6px 12px;text-align:right">P.Venta</th><th style="padding:6px 12px;text-align:center">Estado</th>'
+      +'<th style="padding:6px 12px;text-align:center"></th>'
       +'</tr></thead><tbody>';
     prods.forEach(function(p,i){
       var crit=(p.stock||0)<(p.min||1);
@@ -6421,6 +6394,7 @@ function renderInventarioPorProveedor(filtro){
         +'<td style="padding:5px 12px;text-align:center;color:var(--tx3)">'+(p.min||1)+'</td>'
         +'<td style="padding:5px 12px;text-align:right;color:var(--am)">'+fmt(p.venta||0)+'</td>'
         +'<td style="padding:5px 12px;text-align:center"><span class="badge '+(crit?'brj':bajo?'bam':'bvd')+'" style="font-size:10px">'+(crit?'Crítico':bajo?'Bajo':'Normal')+'</span></td>'
+        +'<td style="padding:5px 12px;text-align:center"><button class="btn btn-secondary btn-xs" onclick="editarProductoRapido(this.dataset.sku)" data-sku="'+p.sku+'" title="Editar producto">✏️</button></td>'
         +'</tr>';
     });
     html+='</tbody></table></div></div>';
@@ -6687,45 +6661,9 @@ function updateComprasBadge(){
 // ════════════════════════════════════════════════════════════
 // PROVEEDORES con tabs
 // ════════════════════════════════════════════════════════════
-async function renderProveedores(){
-  var cont=document.getElementById('page-proveedores'); if(!cont) return;
-  var provs=MEM.proveedores||[];
-  var tabsHtml='<div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg-input);border-radius:10px;padding:4px;width:fit-content">'
-    +'<button id="pt-lista" onclick="_provTab(\'lista\')" style="padding:7px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;background:var(--bg-card);color:var(--am)">🏭 Lista</button>'
-    +'<button id="pt-facturas" onclick="_provTab(\'facturas\')" style="padding:7px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;background:transparent;color:var(--tx2)">📋 Facturas por Proveedor</button>'
-    +'</div>';
-  cont.innerHTML='<div class="section-header"><h2>🏭 Proveedores</h2><button class="btn btn-primary" onclick="openModalProveedor()">+ Nuevo Proveedor</button></div>'
-    +tabsHtml+'<div id="prov-tab-content"></div>';
-  _provRenderLista();
-}
-function _provTab(tab){
-  var ptl=document.getElementById('pt-lista'),ptf=document.getElementById('pt-facturas');
-  if(ptl){ptl.style.background=tab==='lista'?'var(--bg-card)':'transparent';ptl.style.color=tab==='lista'?'var(--am)':'var(--tx2)';}
-  if(ptf){ptf.style.background=tab==='facturas'?'var(--bg-card)':'transparent';ptf.style.color=tab==='facturas'?'var(--am)':'var(--tx2)';}
-  if(tab==='lista') _provRenderLista(); else _provRenderFacturas('');
-}
-function _provRenderLista(){
-  var cont=document.getElementById('prov-tab-content'); if(!cont) return;
-  var provs=MEM.proveedores||[];
-  var rows=provs.length?provs.map(function(p){
-    return '<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:9px 12px;color:var(--tx2);font-size:12px">'+(p.rut||'—')+'</td>'
-      +'<td style="padding:9px 12px"><strong>'+p.empresa+'</strong></td>'
-      +'<td style="padding:9px 12px">'+(p.contacto||'—')+'</td>'
-      +'<td style="padding:9px 12px">'+(p.tel||'—')+'</td>'
-      +'<td style="padding:9px 12px"><span class="badge bvd">'+(p.cond||'Contado')+'</span></td>'
-      +'<td style="padding:9px 12px;font-size:12px;color:var(--tx2)">'+(p.prod||'—')+'</td>'
-      +'<td style="padding:9px 12px;font-size:12px">'+(p.ultima||'—')+'</td>'
-      +'<td style="padding:9px 12px;display:flex;gap:6px">'
-      +'<button class="btn btn-secondary btn-xs" onclick="openModalProveedor(\''+p.id+'\')">✏️</button>'
-      +'<button class="btn btn-primary btn-xs" onclick="_provVerFacturas(\''+p.empresa.replace(/'/g,"\\'")+'\')"">📋 Facturas</button>'
-      +'<button class="btn btn-danger btn-xs" onclick="delProv(\''+p.id+'\')">🗑</button>'
-      +'</td></tr>';
-  }).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx3)">Sin proveedores registrados</td></tr>';
-  cont.innerHTML='<div class="card"><div style="overflow-x:auto"><table style="width:100%">'
-    +'<thead><tr><th style="padding:9px 12px">RUT</th><th>Empresa</th><th>Contacto</th><th>Teléfono</th><th>Condición</th><th>Productos</th><th>Última Compra</th><th>Acciones</th></tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div></div>';
-}
+
+
+
 function _provRenderFacturas(filtroEmpresa){
   filtroEmpresa=filtroEmpresa||'';
   var cont=document.getElementById('prov-tab-content'); if(!cont) return;
@@ -6967,6 +6905,220 @@ function _filtPedido(q){
   });
 }
 
+// ════════════════════════════════════════════════════════════
+//  PROVEEDORES — tarjetas + facturas
+// ════════════════════════════════════════════════════════════
+
+// Color palette for provider icons (cycles through)
+var PROV_COLORS = [
+  ['#F97316','#7C2D12'],['#3B82F6','#1E3A5F'],['#22C55E','#14532D'],
+  ['#A855F7','#4A1D96'],['#EF4444','#7F1D1D'],['#14B8A6','#134E4A'],
+  ['#F59E0B','#78350F'],['#EC4899','#831843']
+];
+function _provColor(nombre){
+  var idx=0;
+  for(var i=0;i<nombre.length;i++) idx+=nombre.charCodeAt(i);
+  return PROV_COLORS[idx%PROV_COLORS.length];
+}
+
+async function renderProveedores(){
+  var cont=document.getElementById('page-proveedores'); if(!cont) return;
+  var provs=MEM.proveedores||[];
+
+  cont.innerHTML=
+    '<div class="section-header"><h2>🏭 Proveedores</h2>'
+    +'<button class="btn btn-primary" onclick="openModalProveedor()">+ Nuevo Proveedor</button>'
+    +'</div>'
+    +'<div style="display:flex;gap:4px;margin-bottom:18px;background:var(--bg-input);border-radius:10px;padding:4px;width:fit-content">'
+    +'<button id="pt-tarjetas" onclick="_provTab(\'tarjetas\')" style="padding:7px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;background:var(--bg-card);color:var(--am)">🏭 Proveedores</button>'
+    +'<button id="pt-facturas" onclick="_provTab(\'facturas\')" style="padding:7px 16px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;background:transparent;color:var(--tx2)">📋 Facturas</button>'
+    +'</div>'
+    +'<div id="prov-tab-content"></div>';
+
+  _provRenderTarjetas();
+}
+
+function _provTab(tab){
+  var ptl=document.getElementById('pt-tarjetas'),ptf=document.getElementById('pt-facturas');
+  if(ptl){ptl.style.background=tab==='tarjetas'?'var(--bg-card)':'transparent';ptl.style.color=tab==='tarjetas'?'var(--am)':'var(--tx2)';}
+  if(ptf){ptf.style.background=tab==='facturas'?'var(--bg-card)':'transparent';ptf.style.color=tab==='facturas'?'var(--am)':'var(--tx2)';}
+  if(tab==='tarjetas') _provRenderTarjetas();
+  else _provRenderFacturas('');
+}
+
+function _provRenderTarjetas(filtro){
+  filtro=filtro||'';
+  var cont=document.getElementById('prov-tab-content'); if(!cont) return;
+  var provs=(MEM.proveedores||[]).filter(function(p){
+    return !filtro||p.empresa.toLowerCase().includes(filtro)||(p.tel||'').includes(filtro);
+  });
+  var inv=MEM.inventario||[];
+
+  var cards=provs.length ? provs.map(function(p){
+    var col=_provColor(p.empresa);
+    var inicial=p.empresa.charAt(0).toUpperCase();
+    var prods=inv.filter(function(i){return (i.prov||'').toLowerCase()===p.empresa.toLowerCase();});
+    var bajos=prods.filter(function(i){return (i.stock||0)>0&&(i.stock||0)<(i.min||1);}).length;
+    var sinStock=prods.filter(function(i){return (i.stock||0)===0;}).length;
+    var alertaBadge='';
+    if(sinStock>0) alertaBadge='<span style="font-size:10px;background:var(--rjbg);color:var(--rjtx);padding:2px 8px;border-radius:10px;font-weight:700">⚠️ '+sinStock+' sin stock</span>';
+    else if(bajos>0) alertaBadge='<span style="font-size:10px;background:var(--nrbg);color:var(--nrtx);padding:2px 8px;border-radius:10px;font-weight:700">⚠️ '+bajos+' bajo</span>';
+
+    return '<div id="pcard-'+p.id+'" onclick="_provVerProductos(\''+p.id+'\')" style="'
+      +'background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;'
+      +'cursor:pointer;transition:all .2s;position:relative;'
+      +'display:flex;flex-direction:column;gap:10px"'
+      +' onmouseover="this.style.borderColor=\'var(--am)\';this.style.boxShadow=\'0 4px 20px rgba(245,196,0,.15)\'"'
+      +' onmouseout="this.style.borderColor=\'var(--border)\';this.style.boxShadow=\'none\'">'
+      // Icon + name row
+      +'<div style="display:flex;align-items:center;gap:12px">'
+      +'<div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,'+col[0]+','+col[1]+');'
+      +'display:flex;align-items:center;justify-content:center;font-family:\'Outfit\',sans-serif;'
+      +'font-size:20px;font-weight:800;color:#fff;flex-shrink:0">'+inicial+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-family:\'Outfit\',sans-serif;font-size:15px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.empresa+'</div>'
+      +(p.tel?'<div style="font-size:12px;color:var(--tx2);margin-top:2px">📞 '+p.tel+'</div>':'')
+      +'</div>'
+      +'</div>'
+      // Stats row
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-size:12px;background:var(--bg-input);padding:3px 10px;border-radius:20px;color:var(--tx2)">📦 '+prods.length+' productos</span>'
+      +alertaBadge
+      +'</div>'
+      // Condition + observations
+      +(p.cond?'<div style="font-size:11px;color:var(--aztx);background:var(--azbg);padding:4px 10px;border-radius:20px;width:fit-content">'+p.cond+'</div>':'')
+      +(p.obs?'<div style="font-size:11px;color:var(--tx3);line-height:1.4;border-top:1px solid var(--border);padding-top:8px">'+p.obs+'</div>'
+        :(p.notas||p.dir)?'<div style="font-size:11px;color:var(--tx3);line-height:1.4;border-top:1px solid var(--border);padding-top:8px">'+(p.notas||p.dir||'')+'</div>':'')
+      // Action buttons
+      +'<div style="display:flex;gap:6px;margin-top:4px" onclick="event.stopPropagation()">'
+      +'<button class="btn btn-secondary btn-sm" onclick="openModalProveedor(\''+p.id+'\')">✏️ Editar</button>'
+      +'<button class="btn btn-danger btn-sm" onclick="delProv(\''+p.id+'\')">🗑 Eliminar</button>'
+      +'</div>'
+      +'</div>';
+  }).join('') : '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--tx3)">Sin proveedores registrados. Usa "+ Nuevo Proveedor" para agregar.</div>';
+
+  cont.innerHTML=
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">'
+    +'<input placeholder="🔍 Buscar proveedor..." oninput="_provRenderTarjetas(this.value.toLowerCase())" '
+    +'style="flex:1;max-width:300px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--tx);font-size:13px">'
+    +'<span style="font-size:12px;color:var(--tx3)">'+(MEM.proveedores||[]).length+' proveedores · '+(inv||[]).length+' productos en inventario</span>'
+    +'</div>'
+    +'<div id="prov-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:14px">'
+    +cards+'</div>'
+    +'<div id="prov-productos-panel" style="display:none"></div>';
+}
+
+function _provVerProductos(provId){
+  var p=(MEM.proveedores||[]).find(function(x){return x.id===provId;});
+  if(!p) return;
+  var panel=document.getElementById('prov-productos-panel');
+  if(!panel) return;
+
+  // Toggle: if already showing this provider, close it
+  if(panel.dataset.prov===provId&&panel.style.display!=='none'){
+    panel.style.display='none'; panel.dataset.prov='';
+    return;
+  }
+  panel.dataset.prov=provId;
+
+  var inv=MEM.inventario||[];
+  var prods=inv.filter(function(i){return (i.prov||'').toLowerCase()===p.empresa.toLowerCase();});
+
+  function stockBadge(prod){
+    var s=prod.stock||0, m=prod.min||1;
+    if(s===0) return '<span class="badge brj">Sin stock</span>';
+    if(s<m) return '<span class="badge bam">Bajo</span>';
+    return '<span class="badge bvd">OK</span>';
+  }
+
+  var rows=prods.length ? prods.map(function(pr){
+    return '<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:8px 12px;font-weight:500">'+pr.nombre+'</td>'
+      +'<td style="padding:8px 12px"><span class="badge baz" style="font-size:10px">'+(pr.cat||'—')+'</span></td>'
+      +'<td style="padding:8px 12px;text-align:center;font-weight:700;color:'+((pr.stock||0)===0?'var(--rjtx)':(pr.stock||0)<(pr.min||1)?'var(--nrtx)':'var(--vdtx)')+'">'+( pr.stock||0)+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;color:var(--am);font-weight:700">'+fmt(pr.venta||0)+'</td>'
+      +'<td style="padding:8px 12px">'+stockBadge(pr)+'</td>'
+      +'</tr>';
+  }).join('') : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--tx3)">Sin productos asociados a este proveedor</td></tr>';
+
+  var col=_provColor(p.empresa);
+  panel.style.display='block';
+  panel.innerHTML=
+    '<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;'
+    +'background:linear-gradient(135deg,'+col[0]+'22,'+col[1]+'11);border-bottom:1px solid var(--border)">'
+    +'<div style="display:flex;align-items:center;gap:10px">'
+    +'<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,'+col[0]+','+col[1]+');display:flex;align-items:center;justify-content:center;font-family:\'Outfit\',sans-serif;font-size:16px;font-weight:800;color:#fff">'+p.empresa.charAt(0).toUpperCase()+'</div>'
+    +'<div><div style="font-family:\'Outfit\',sans-serif;font-weight:700;font-size:14px">Productos de '+p.empresa+'</div>'
+    +'<div style="font-size:12px;color:var(--tx3)">'+prods.length+' producto'+( prods.length!==1?'s':'')+'</div></div>'
+    +'</div>'
+    +'<button class="btn btn-secondary btn-sm" onclick="document.getElementById(\'prov-productos-panel\').style.display=\'none\'">✕ Cerrar</button>'
+    +'</div>'
+    +'<div style="overflow-x:auto">'
+    +'<table style="width:100%">'
+    +'<thead><tr style="background:var(--bg-input)">'
+    +'<th style="padding:8px 12px;text-align:left">Producto</th>'
+    +'<th style="padding:8px 12px;text-align:left">Categoría</th>'
+    +'<th style="padding:8px 12px;text-align:center">Stock</th>'
+    +'<th style="padding:8px 12px;text-align:right">P.Venta</th>'
+    +'<th style="padding:8px 12px;text-align:left">Estado</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table></div></div>';
+
+  // Scroll to panel
+  setTimeout(function(){panel.scrollIntoView({behavior:'smooth',block:'nearest'});},100);
+}
+
+// Keep _provRenderFacturas and _provVerFacturas from existing code
+// (they don't need to change)
+
+// Updated openModalProveedor — adds 'obs' field
+function openModalProveedor(id){
+  var p=id?(MEM.proveedores||[]).find(function(x){return x.id===id;}):null;
+  var m=document.getElementById('modal-proveedor');
+  if(!m) return;
+  document.getElementById('tit-prov').textContent=id?'Editar Proveedor':'Nuevo Proveedor';
+  document.getElementById('prov-id').value=id||'';
+  ['rut','empresa','contacto','tel','email','prod','dir'].forEach(function(f){
+    var el=document.getElementById('prov-'+f);
+    if(el) el.value=p?p[f]||'':'';
+  });
+  var condEl=document.getElementById('prov-cond');
+  if(condEl) condEl.value=p?p.cond||'Contado':'Contado';
+  // New: obs field
+  var obsEl=document.getElementById('prov-obs');
+  if(obsEl) obsEl.value=p?p.obs||p.notas||'':'';
+  m.classList.add('open');
+}
+
+async function guardarProveedor(){
+  if(typeof adminGuard==='function'&&!adminGuard()) return;
+  var empresa=(document.getElementById('prov-empresa')||{}).value||''; empresa=empresa.trim();
+  if(!empresa){ toast('Nombre de empresa requerido','rojo'); return; }
+  var obsEl=document.getElementById('prov-obs');
+  var obj={
+    rut:(document.getElementById('prov-rut')||{}).value||'',
+    empresa:empresa,
+    contacto:(document.getElementById('prov-contacto')||{}).value||'',
+    tel:(document.getElementById('prov-tel')||{}).value||'',
+    email:(document.getElementById('prov-email')||{}).value||'',
+    cond:(document.getElementById('prov-cond')||{}).value||'Contado',
+    ultima:today(),
+    prod:(document.getElementById('prov-prod')||{}).value||'',
+    dir:(document.getElementById('prov-dir')||{}).value||'',
+    obs:obsEl?obsEl.value.trim():''
+  };
+  var id=(document.getElementById('prov-id')||{}).value||null;
+  var accion=id?'Editar':'Nuevo';
+  if(id){ obj.id=id; await dbPut('proveedores',obj); }
+  else await dbAdd('proveedores',obj);
+  MEM.proveedores=await dbGetAll('proveedores');
+  await logAction('Proveedor',accion,empresa);
+  closeModal('modal-proveedor'); renderProveedores();
+  toast(id?'Proveedor actualizado ✅':'Proveedor registrado ✅');
+}
+
 // ================================================================
 //  INICIO
 // ================================================================
@@ -7181,6 +7333,65 @@ window.addEventListener('DOMContentLoaded', ()=>{
     else if(e.key==='Escape'){ selPinKey('clr'); e.preventDefault(); }
     else if(e.key==='Enter'){
       const dots = document.querySelectorAll('.pin-dot.active');
+      if(dots.length===4) document.querySelector('.btn-pin-ok')?.click();
+      e.preventDefault();
+    }
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>ument.querySelectorAll('.pin-dot.active');
       if(dots.length===4) document.querySelector('.btn-pin-ok')?.click();
       e.preventDefault();
     }
